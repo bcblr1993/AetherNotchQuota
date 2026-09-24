@@ -378,6 +378,7 @@ final class SidebarSurface: NSView {
     }
     private func stopEmblemAnimations() { emblem.stopMotion() }
     var hasEmblemAnimations: Bool { emblem.hasMotion }
+    var hasGhostReturnMotion: Bool { emblem.hasReturnMotion }
     private func updateEmblemIdle() { emblem.idle(false) }
     private func cancelExpand() { expandWork?.cancel(); expandWork = nil }
     func update(_ values: [OverviewAccount], duration: TimeInterval) {
@@ -494,6 +495,7 @@ final class SidebarSurface: NSView {
         let emblemFade = CABasicAnimation(keyPath: "opacity")
         emblemFade.fromValue = previousEmblemOpacity; emblemFade.toValue = value ? 1 : 0; emblemFade.duration = value ? 0.24 : 0.12
         emblem.add(emblemFade, forKey: "appearance")
+        if value { emblem.playReturn() }
     }
 
     func toggleAutoCollapse() {

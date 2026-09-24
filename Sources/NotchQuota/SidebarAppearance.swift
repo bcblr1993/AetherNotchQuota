@@ -67,18 +67,38 @@ final class SidebarEmblem: CALayer {
             let mark = CAShapeLayer(); mark.path = spark; mark.fillColor = NSColor(white: 0.96, alpha: 1).cgColor
             addSublayer(mark); addSublayer(valueLabel)
         case .ghost:
-            let p = CGMutablePath(); p.move(to: CGPoint(x: 5, y: 17))
-            p.addCurve(to: CGPoint(x: 30, y: 17), control1: CGPoint(x: 3, y: 39), control2: CGPoint(x: 32, y: 39))
-            p.addLine(to: CGPoint(x: 31, y: 6))
-            p.addCurve(to: CGPoint(x: 23, y: 5), control1: CGPoint(x: 31, y: 1), control2: CGPoint(x: 25, y: 1))
-            p.addCurve(to: CGPoint(x: 15, y: 5), control1: CGPoint(x: 21, y: 1), control2: CGPoint(x: 17, y: 1))
-            p.addCurve(to: CGPoint(x: 5, y: 6), control1: CGPoint(x: 10, y: 1), control2: CGPoint(x: 3, y: 1))
+            let p = CGMutablePath(); p.move(to: CGPoint(x: 4.2, y: 13))
+            p.addCurve(to: CGPoint(x: 8.4, y: 29), control1: CGPoint(x: 2.3, y: 19), control2: CGPoint(x: 3.5, y: 27))
+            p.addCurve(to: CGPoint(x: 25.5, y: 31), control1: CGPoint(x: 12.2, y: 35), control2: CGPoint(x: 21.4, y: 35))
+            p.addCurve(to: CGPoint(x: 32.2, y: 13), control1: CGPoint(x: 31.1, y: 28), control2: CGPoint(x: 33.3, y: 20))
+            p.addCurve(to: CGPoint(x: 31, y: 5.8), control1: CGPoint(x: 31.8, y: 9), control2: CGPoint(x: 33.4, y: 7.4))
+            p.addCurve(to: CGPoint(x: 23.3, y: 5), control1: CGPoint(x: 29.2, y: 2.1), control2: CGPoint(x: 25.3, y: 2.5))
+            p.addCurve(to: CGPoint(x: 17.2, y: 5.6), control1: CGPoint(x: 21.8, y: 2.5), control2: CGPoint(x: 19.5, y: 2.8))
+            p.addCurve(to: CGPoint(x: 10, y: 5), control1: CGPoint(x: 15.2, y: 2.7), control2: CGPoint(x: 12, y: 2.8))
+            p.addCurve(to: CGPoint(x: 4.2, y: 13), control1: CGPoint(x: 5.4, y: 2.6), control2: CGPoint(x: 3.9, y: 7.5))
             p.closeSubpath()
-            body(p, colors: [NSColor(red: 1, green: 0.98, blue: 0.93, alpha: 1), NSColor(red: 0.80, green: 0.80, blue: 0.84, alpha: 1)])
-            eyes.frame = CGRect(x: 9, y: 18, width: 14, height: 7)
-            for x: CGFloat in [1, 9] {
-                let eye = CAShapeLayer(); eye.path = CGPath(ellipseIn: CGRect(x: x, y: 0, width: 3.5, height: 6), transform: nil)
-                eye.fillColor = NSColor(white: 0.16, alpha: 1).cgColor; eyes.addSublayer(eye)
+            body(p, colors: [
+                NSColor(srgbRed: 1, green: 0.988, blue: 0.965, alpha: 1),
+                NSColor(srgbRed: 0.925, green: 0.914, blue: 0.941, alpha: 1),
+                NSColor(srgbRed: 0.843, green: 0.839, blue: 0.882, alpha: 1)
+            ])
+            for cheekX: CGFloat in [8.2, 25] {
+                let cheek = CAShapeLayer()
+                cheek.path = CGPath(ellipseIn: CGRect(x: cheekX, y: 15.9, width: 4.6, height: 2), transform: nil)
+                cheek.fillColor = NSColor(srgbRed: 0.91, green: 0.66, blue: 0.73, alpha: 0.52).cgColor
+                addSublayer(cheek)
+            }
+            let smilePath = CGMutablePath(); smilePath.move(to: CGPoint(x: 16.1, y: 17.2))
+            smilePath.addQuadCurve(to: CGPoint(x: 19.6, y: 17.1), control: CGPoint(x: 17.8, y: 14.8))
+            let smile = CAShapeLayer(); smile.path = smilePath; smile.fillColor = nil
+            smile.strokeColor = NSColor(srgbRed: 0.36, green: 0.31, blue: 0.38, alpha: 1).cgColor
+            smile.lineWidth = 0.8; smile.lineCap = .round; addSublayer(smile)
+            eyes.frame = bounds
+            let eyeColor = NSColor(srgbRed: 0.16, green: 0.17, blue: 0.21, alpha: 1).cgColor
+            for frame in [CGRect(x: 10.5, y: 19.8, width: 3.6, height: 5.5),
+                          CGRect(x: 21, y: 20.6, width: 3.6, height: 5.5)] {
+                let eye = CAShapeLayer(); eye.path = CGPath(ellipseIn: frame, transform: nil)
+                eye.fillColor = eyeColor; eyes.addSublayer(eye)
             }
             addSublayer(eyes)
             // Lean the body and face out into the desktop from the screen edge.
@@ -112,6 +132,21 @@ final class SidebarEmblem: CALayer {
     }
     func stopMotion() { removeAllAnimations(); eyes.removeAllAnimations() }
     var hasMotion: Bool { animationKeys()?.isEmpty == false || eyes.animationKeys()?.isEmpty == false }
+    var hasReturnMotion: Bool { animation(forKey: "returnHop") != nil && eyes.animation(forKey: "returnBlink") != nil }
+    func playReturn() {
+        guard appearance == .ghost else { return }
+        let hop = CAKeyframeAnimation(keyPath: "transform.translation.y")
+        hop.values = [0, -2.2, 0.8, 0]
+        hop.keyTimes = [0, 0.28, 0.68, 1]
+        hop.duration = 0.38; hop.calculationMode = .cubic
+        add(hop, forKey: "returnHop")
+        let blink = CAKeyframeAnimation(keyPath: "transform.scale.y")
+        blink.values = [1, 0.14, 1]
+        blink.keyTimes = [0, 0.42, 1]
+        blink.beginTime = CACurrentMediaTime() + 0.14
+        blink.duration = 0.23
+        eyes.add(blink, forKey: "returnBlink")
+    }
     func idle(_ enabled: Bool) {
         guard enabled else { removeAnimation(forKey: "idleFloat"); eyes.removeAllAnimations(); return }
         guard animation(forKey: "idleFloat") == nil else { return }

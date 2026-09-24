@@ -168,6 +168,11 @@ extension AppDelegate {
             if let screen = NSScreen.main {
                 bar.setAppearance(.ghost)
                 bar.place(at: NSPoint(x: screen.visibleFrame.midX, y: screen.visibleFrame.midY), screen: screen)
+                bar.enterBar(); await wait(0.4)
+                bar.exitBar(); bar.setCollapsed(true)
+                check(bar.hasGhostReturnMotion, "ghost plays one bounded return hop and blink")
+                await wait(0.55)
+                check(!bar.hasEmblemAnimations, "ghost rests without looping animation")
                 bar.exitBar(); bar.setCollapsed(true); await wait(0.4)
                 let savedRefresh = bar.onReminderRefresh
                 var attempted: [String] = []
