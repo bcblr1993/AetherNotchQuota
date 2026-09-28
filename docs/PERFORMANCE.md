@@ -8,7 +8,7 @@
 
 在仓库执行 `scripts/monitor-performance.sh 240 10`。首次使用 Xcode 的 Swift 编译器编译采样工具，后续复用 `.build/performance/probe`。默认将独立 JSONL 文件保存到 `~/Library/Logs/NotchQuota/Performance`。不写入应用，不在应用内加定时器，不采集账号、凭据、请求地址或进程内存内容。
 
-工具用 macOS `proc_pid_rusage` 读取目标应用的内核计数，每 10 秒一次，运行 4 分钟后退出。只选择 `/Applications/NotchQuota.app/Contents/MacOS/NotchQuota`；应用未运行或进程结束则记录事件并退出，不自行启动。PID 的启动时间用于阻止重用 PID 被误算。
+工具用 macOS `proc_pid_rusage` 读取目标应用的内核计数，每 10 秒一次，运行 4 分钟后退出。优先选择 `/Applications/AetherNotchQuota.app/Contents/MacOS/NotchQuota`，旧版安装则读取 `/Applications/NotchQuota.app/Contents/MacOS/NotchQuota`；应用未运行或进程结束则记录事件并退出，不自行启动。PID 的启动时间用于阻止重用 PID 被误算。
 
 指标：CPU 用户态+内核态时间增量 / 实际采样间隔（100% 为一个核心）；resident size (RSS)；physical footprint（用于观察实际内存负担）；空闲唤醒、磁盘读写增量。RSS 包含共享页，不应直接作为独占内存或泄漏证据。指标不包括 WindowServer/GPU 和短命子进程，也不能代表全机能耗。
 

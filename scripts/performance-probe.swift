@@ -6,8 +6,9 @@ let args = CommandLine.arguments
 let requestedPID = args.count > 3 ? Int32(args[3]) : nil
 let duration = min(600, max(1, Double(args.dropFirst().first ?? "240") ?? 240))
 let interval = min(60, max(1, Double(args.dropFirst(2).first ?? "10") ?? 10))
-let executable = "/Applications/NotchQuota.app/Contents/MacOS/NotchQuota"
-let version = requestedPID != nil ? "developer-test" : Bundle(path: "/Applications/NotchQuota.app")?.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "unknown"
+let appPath = FileManager.default.fileExists(atPath: "/Applications/AetherNotchQuota.app") ? "/Applications/AetherNotchQuota.app" : "/Applications/NotchQuota.app"
+let executable = appPath + "/Contents/MacOS/NotchQuota"
+let version = requestedPID != nil ? "developer-test" : Bundle(path: appPath)?.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "unknown"
 func emit(_ value: [String: Any]) {
     if let data = try? JSONSerialization.data(withJSONObject: value, options: [.sortedKeys]), let text = String(data: data, encoding: .utf8) { print(text); fflush(stdout) }
 }
