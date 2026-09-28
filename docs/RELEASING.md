@@ -30,9 +30,9 @@ xcrun notarytool log SUBMISSION_ID --keychain-profile "$NOTARY_PROFILE"
 
 ```sh
 VERSION=$(cat VERSION)
-gh release create "v$VERSION" --title "NotchQuota $VERSION" \
+gh release create "v$VERSION" --title "AetherNotchQuota $VERSION" \
   --notes-file docs/RELEASE_NOTES.md \
-  "dist/NotchQuota-$VERSION-macos-arm64.dmg" dist/SHA256SUMS.txt dist/appcast.xml
+  "dist/AetherNotchQuota-$VERSION-macos-arm64.dmg" dist/SHA256SUMS.txt dist/appcast.xml
 ```
 
 ## GitHub 自动签名发布

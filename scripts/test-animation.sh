@@ -5,7 +5,7 @@ cd "$ROOT"
 OUT="${1:-$HOME/Library/Logs/NotchQuota/Performance/animation-$(date -u +%Y%m%dT%H%M%SZ)}"
 mkdir -p "$OUT"
 # Build separately first; do not replace the user's installed signed application.
-APP="$ROOT/build/NotchQuota.app/Contents/MacOS/NotchQuota"
+APP="$ROOT/build/AetherNotchQuota.app/Contents/MacOS/NotchQuota"
 if [ ! -x "$APP" ]; then echo 'Run scripts/build-app.sh first.' >&2; exit 1; fi
 # Restrict inherited environment, including when attaching Instruments later.
 env -i HOME="$HOME" PATH=/usr/bin:/bin:/usr/sbin:/sbin "$APP" --animation-test > "$OUT/scenarios.jsonl" &

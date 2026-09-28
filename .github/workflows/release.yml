@@ -51,7 +51,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           VERSION="$(tr -d '\n' < VERSION)"
-          gh release create "v$VERSION" --target "$GITHUB_SHA" --title "NotchQuota $VERSION" --notes-file docs/RELEASE_NOTES.md "dist/NotchQuota-$VERSION-macos-arm64.dmg" dist/SHA256SUMS.txt dist/appcast.xml
+          gh release create "v$VERSION" --target "$GITHUB_SHA" --title "AetherNotchQuota $VERSION" --notes-file docs/RELEASE_NOTES.md "dist/AetherNotchQuota-$VERSION-macos-arm64.dmg" dist/SHA256SUMS.txt dist/appcast.xml
       - name: Remove temporary signing material
         if: always()
         run: |

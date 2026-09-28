@@ -1,7 +1,7 @@
-NotchQuota · Apple Silicon
+AetherNotchQuota · Apple Silicon
 
-1. 将 NotchQuota 拖入 Applications。
-2. 从 Applications 启动 NotchQuota。
+1. 将 AetherNotchQuota 拖入 Applications。
+2. 从 Applications 启动 AetherNotchQuota。
 3. 点击屏幕顶部的应用图标切换 Codex / Claude / Antigravity。
 4. 紧凑图标和百分比常驻；无操作 15 秒收起详情并显示默认应用。
 5. 右键可刷新额度、下载更新或退出。
@@ -13,6 +13,6 @@ NotchQuota · Apple Silicon
 
 绿色 >50%，黄色 20–50%，红色 <20%。
 
-项目与帮助：https://github.com/bcblr1993/NotchQuota
+项目与帮助：https://github.com/bcblr1993/AetherNotchQuota
 
 需要开机自动启动时，右键刘海区域勾选“开机自动启动”。待系统允许时按菜单入口到系统设置中允许。

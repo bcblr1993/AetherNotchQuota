@@ -3,7 +3,7 @@
 <plist version="1.0">
 <dict>
 	<key>CFBundleDisplayName</key>
-	<string>NotchQuota</string>
+	<string>AetherNotchQuota</string>
 	<key>CFBundleExecutable</key>
 	<string>NotchQuota</string>
 	<key>CFBundleIconFile</key>
@@ -11,7 +11,7 @@
 	<key>CFBundleIdentifier</key>
 	<string>io.github.bcblr1993.NotchQuota</string>
 	<key>CFBundleName</key>
-	<string>NotchQuota</string>
+	<string>AetherNotchQuota</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
@@ -33,7 +33,7 @@
 	<key>SUEnableSystemProfiling</key>
 	<false/>
 	<key>SUFeedURL</key>
-	<string>https://github.com/bcblr1993/NotchQuota/releases/latest/download/appcast.xml</string>
+	<string>https://github.com/bcblr1993/AetherNotchQuota/releases/latest/download/appcast.xml</string>
 	<key>SUPublicEDKey</key>
 	<string>gFoiXS+rSGkGXDFDZ4Bty0KZkcDSBmCNXwggh3hljak=</string>
 	<key>SURequireSignedFeed</key>

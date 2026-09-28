@@ -76,9 +76,9 @@ extension AppDelegate: NSPopoverDelegate {
         if temporarilyHidden || visibleTargets.isEmpty {
             closeOverview()
             quotaStatusItem?.length = NSStatusItem.squareLength
-            button.image = NSImage(systemSymbolName: temporarilyHidden ? "eye.slash" : "slider.horizontal.3", accessibilityDescription: "NotchQuota 设置")
+            button.image = NSImage(systemSymbolName: temporarilyHidden ? "eye.slash" : "slider.horizontal.3", accessibilityDescription: "AetherNotchQuota 设置")
             button.title = ""; button.attributedTitle = NSAttributedString(string: "")
-            button.toolTip = temporarilyHidden ? "NotchQuota · 点击立即显示" : "NotchQuota · 选择显示的账号"
+            button.toolTip = temporarilyHidden ? "AetherNotchQuota · 点击立即显示" : "AetherNotchQuota · 选择显示的账号"
         } else {
             quotaStatusItem?.length = 74
             button.image = MenuBarArtwork.icon

@@ -16,7 +16,7 @@ args = parser.parse_args()
 root = Path(__file__).resolve().parent.parent
 out = args.output.resolve()
 out.mkdir(parents=True, exist_ok=True)
-app = root / 'build/NotchQuota.app/Contents/MacOS/NotchQuota'
+app = root / 'build/AetherNotchQuota.app/Contents/MacOS/NotchQuota'
 env = {key: os.environ[key] for key in ('HOME', 'PATH', 'TMPDIR') if key in os.environ}
 env['NOTCHQUOTA_SMOKE_DIR'] = str(out)
 children = []

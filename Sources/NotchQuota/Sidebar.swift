@@ -262,7 +262,7 @@ final class SidebarSurface: NSView {
             p.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .ignoresCycle]; p.appearance = NSAppearance(named: .darkAqua)
             return p
         }
-        panel = window("NotchQuota 侧边栏"); detail = window("NotchQuota 账号详情")
+        panel = window("AetherNotchQuota 侧边栏"); detail = window("AetherNotchQuota 账号详情")
         if persist {
             let d = UserDefaults.standard
             right = d.object(forKey: "sidebarRight") as? Bool ?? true

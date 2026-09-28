@@ -1,7 +1,7 @@
 #!/bin/bash
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-APP="${1:-$ROOT/build/NotchQuota.app}"
+APP="${1:-$ROOT/build/AetherNotchQuota.app}"
 VERSION="$(tr -d '\n' < "$ROOT/VERSION")"
 file "$APP/Contents/MacOS/NotchQuota" | grep -q arm64
 codesign --verify --deep --strict "$APP"

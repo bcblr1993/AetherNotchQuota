@@ -28,7 +28,7 @@ enum LaunchAtLogin {
         let folder = Bundle.main.bundleURL.deletingLastPathComponent().standardizedFileURL
         let allowed = [URL(fileURLWithPath: "/Applications"), FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Applications")]
         guard Bundle.main.bundleURL.pathExtension == "app", allowed.contains(folder) else {
-            throw QuotaError.message("请先将 NotchQuota 放入 Applications 文件夹，再设置自动启动。")
+            throw QuotaError.message("请先将 AetherNotchQuota 放入 Applications 文件夹，再设置自动启动。")
         }
         if enabled {
             if state != .enabled && state != .requiresApproval { try SMAppService.mainApp.register() }

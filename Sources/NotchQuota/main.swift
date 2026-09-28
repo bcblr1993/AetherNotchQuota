@@ -77,7 +77,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         panel.level = .statusBar + 1
         panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .stationary, .ignoresCycle]
         panel.hidesOnDeactivate = false; panel.acceptsMouseMovedEvents = true
-        panel.isReleasedWhenClosed = false; panel.title = "NotchQuota"
+        panel.isReleasedWhenClosed = false; panel.title = "AetherNotchQuota"
         quotaView = QuotaView(frame: .zero); panel.contentView = quotaView
         quotaView.onSwitch = { [weak self] in if self?.testMode == false { self?.next() } }
         quotaView.onExpand = { [weak self] in if self?.testMode == false { self?.toggleExpanded() } }
@@ -468,7 +468,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let settingsRoot = NSMenuItem(title: "设置与更新", action: nil, keyEquivalent: "")
         settingsRoot.submenu = settingsMenu; menu.addItem(settingsRoot)
         menu.addItem(.separator())
-        let quit = NSMenuItem(title: "退出 NotchQuota", action: #selector(quit), keyEquivalent: "q"); quit.target = self; menu.addItem(quit)
+        let quit = NSMenuItem(title: "退出 AetherNotchQuota", action: #selector(quit), keyEquivalent: "q"); quit.target = self; menu.addItem(quit)
         return menu
     }
     @objc func changeSidebarAppearance(_ sender: NSMenuItem) {
@@ -499,7 +499,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         appUpdates.check()
     }
     @objc func toggleUpdateChecks() { guard !demo, !testMode else { return }; appUpdates.toggleAutomaticChecks() }
-    @objc func openHelp() { NSWorkspace.shared.open(URL(string: "https://github.com/bcblr1993/NotchQuota#readme")!) }
+    @objc func openHelp() { NSWorkspace.shared.open(URL(string: "https://github.com/bcblr1993/AetherNotchQuota#readme")!) }
     @objc func toggleLaunchAtLogin() {
         guard !demo, !testMode else { return }
         do {

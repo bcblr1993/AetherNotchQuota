@@ -3,17 +3,17 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 VERSION="$(tr -d '\n' < VERSION)"
-APP="$ROOT/build/NotchQuota.app"
+APP="$ROOT/build/AetherNotchQuota.app"
 OUT="$ROOT/dist"
 mkdir -p "$OUT"
 if [ ! -d "$APP" ]; then echo 'Run scripts/build-app.sh first.' >&2; exit 1; fi
-NAME="NotchQuota-$VERSION-macos-arm64"
+NAME="AetherNotchQuota-$VERSION-macos-arm64"
 STAGE="$(mktemp -d "${TMPDIR:-/tmp}/notchquota-dmg.XXXXXX")"
 trap 'rm -rf "$STAGE"' EXIT
 cp -R "$APP" "$STAGE/"
 ln -s /Applications "$STAGE/Applications"
 cp docs/安装说明.txt "$STAGE/安装说明.txt"
-hdiutil create -volname NotchQuota -srcfolder "$STAGE" -ov -format UDZO "$OUT/$NAME.dmg" >/dev/null
+hdiutil create -volname AetherNotchQuota -srcfolder "$STAGE" -ov -format UDZO "$OUT/$NAME.dmg" >/dev/null
 if [ -n "${SIGNING_IDENTITY:-}" ]; then codesign --force --timestamp --sign "$SIGNING_IDENTITY" "$OUT/$NAME.dmg"; fi
 if [ -n "${NOTARY_PROFILE:-}" ]; then
   # Use a byte-identical temporary copy to avoid local preflight file-open stalls.

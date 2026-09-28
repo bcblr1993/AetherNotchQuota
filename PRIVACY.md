@@ -1,6 +1,6 @@
 # 隐私
 
-NotchQuota 无服务器、无统计分析、不收集遥测，不向开发者发送使用情况。
+AetherNotchQuota 无服务器、无统计分析、不收集遥测，不向开发者发送使用情况。
 
 为读取额度，应用按需读取当前用户的 Codex 登录文件、Claude 桌面版的指定登录 Cookie、Claude Code 登录（桌面版不存在时）以及 Antigravity 登录钥匙串或用户启用的独立实例登录文件。只查询 Claude 自己的 Cookie 数据库中与认证/组织选择相关的记录，不读取浏览器历史或其他网站 Cookie。
 

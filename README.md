@@ -1,11 +1,11 @@
-# NotchQuota
+# AetherNotchQuota
 
-[![CI](https://github.com/bcblr1993/NotchQuota/actions/workflows/ci.yml/badge.svg)](https://github.com/bcblr1993/NotchQuota/actions/workflows/ci.yml)
-[![下载最新版](https://img.shields.io/github/v/release/bcblr1993/NotchQuota?label=下载最新版)](https://github.com/bcblr1993/NotchQuota/releases/latest)
+[![CI](https://github.com/bcblr1993/AetherNotchQuota/actions/workflows/ci.yml/badge.svg)](https://github.com/bcblr1993/AetherNotchQuota/actions/workflows/ci.yml)
+[![下载最新版](https://img.shields.io/github/v/release/bcblr1993/AetherNotchQuota?label=下载最新版)](https://github.com/bcblr1993/AetherNotchQuota/releases/latest)
 
 轻量的 macOS AI 额度工具，在 **Codex、Claude、Antigravity** 之间查看剩余额度和重置时间。支持灵动岛、菜单栏和可自由拖动的侧边栏，也支持 Antigravity 多账号。
 
-**[下载安装](https://github.com/bcblr1993/NotchQuota/releases/latest) · [使用方式](#安装) · [更新记录](CHANGELOG.md) · [反馈问题](https://github.com/bcblr1993/NotchQuota/issues/new/choose)**
+**[下载安装](https://github.com/bcblr1993/AetherNotchQuota/releases/latest) · [使用方式](#安装) · [更新记录](CHANGELOG.md) · [反馈问题](https://github.com/bcblr1993/AetherNotchQuota/issues/new/choose)**
 
 - **三种显示模式**：刘海附近紧凑显示、菜单栏点击查看，或在任意显示器上放置侧边栏。
 - **多账号，自选顺序**：勾选需要显示的账号，拖动调整排列，未勾选的账号不查询额度。
@@ -79,11 +79,11 @@
 
 每个实例独立维护登录续期、项目、额度和头像；账号身份变化时清除旧头像/额度并暂停该项，需重新勾选确认。不会自动把同账号多实例的额度相加或合并不同服务环境。每个已选账号按原有 3 分钟周期刷新，任务间隔 2 秒发起；图片最多 1 MiB、解码后缩小至 48 像素，下载结果在进程内缓存 24 小时。原应用无需保持运行，授权失效时仍需重新登录。
 
-高级开发验证：`build/NotchQuota.app/Contents/MacOS/NotchQuota --verify-accounts --force-refresh` 会实际读取所有自动识别的受支持实例（包括未勾选实例），强制验证续期、身份、额度和头像；只输出通过状态与数量，不输出令牌、邮箱或账号标识。普通运行不会执行此验证模式。
+高级开发验证：`build/AetherNotchQuota.app/Contents/MacOS/NotchQuota --verify-accounts --force-refresh` 会实际读取所有自动识别的受支持实例（包括未勾选实例），强制验证续期、身份、额度和头像；只输出通过状态与数量，不输出令牌、邮箱或账号标识。普通运行不会执行此验证模式。
 
 ## 安装
 
-从 [Releases](https://github.com/bcblr1993/NotchQuota/releases/latest) 下载 `macos-arm64.dmg`，打开后将 **NotchQuota** 拖入 **Applications**，再启动。
+从 [Releases](https://github.com/bcblr1993/AetherNotchQuota/releases/latest) 下载 `AetherNotchQuota-<版本>-macos-arm64.dmg`，打开后将 **AetherNotchQuota** 拖入 **Applications**，再启动。
 
 正式发布的 DMG 使用 Developer ID 签名并经过 Apple 公证。首次下载后系统仍可能显示正常的“从互联网下载”确认。
 
@@ -97,7 +97,7 @@
 
 ### 临时隐藏
 
-右键 → 临时隐藏 → 15 分钟 / 1 小时 / 3 小时 / 5 小时。隐藏期间点击 Dock 中的 NotchQuota 图标（或从“应用程序”重新打开）可立即恢复，也可点击菜单栏的眼睛图标选择“立即显示”；恢复后临时 Dock 图标自动移除；重新选择时长会从当前时间重新计时。截止时间跨重启保留，休眠后按实际时间恢复。账号选择保持不变，全部账号被关闭时不会强制显示。
+右键 → 临时隐藏 → 15 分钟 / 1 小时 / 3 小时 / 5 小时。隐藏期间点击 Dock 中的 AetherNotchQuota 图标（或从“应用程序”重新打开）可立即恢复，也可点击菜单栏的眼睛图标选择“立即显示”；恢复后临时 Dock 图标自动移除；重新选择时长会从当前时间重新计时。截止时间跨重启保留，休眠后按实际时间恢复。账号选择保持不变，全部账号被关闭时不会强制显示。
 
 ### 显示模式与账号详情
 
@@ -111,7 +111,7 @@
 
 侧边栏与其他模式共用缓存与刷新任务，悬停/固定不发起额度查询。关闭详情并收起后停止详情计时器；小幽灵另保留低频的 10 分钟提醒定时器。胶囊、圆球和仪表表示最近查看账号的额度，小幽灵仅作展开入口；无记录时使用第一个已启用账号。查询失败或过期时，额度指示显示灰色。图标静置不播放循环动画。临时隐藏、账号选择、独立恢复入口继续有效。
 
-开发回归：`NOTCHQUOTA_SMOKE_DIR="$PWD/build" build/NotchQuota.app/Contents/MacOS/NotchQuota --sidebar-test`。增加 `--benchmark` 可运行七账号静置和连续切换场景；使用脱敏内存数据，不读取凭据，不保存用户偏好。`scripts/performance-probe.swift` 支持第三个可选参数指定开发测试进程 PID；默认仍只采样安装版本。
+开发回归：`NOTCHQUOTA_SMOKE_DIR="$PWD/build" build/AetherNotchQuota.app/Contents/MacOS/NotchQuota --sidebar-test`。增加 `--benchmark` 可运行七账号静置和连续切换场景；使用脱敏内存数据，不读取凭据，不保存用户偏好。`scripts/performance-probe.swift` 支持第三个可选参数指定开发测试进程 PID；默认仍只采样安装版本。
 
 侧栏采用墨蓝石墨渐变、淡冰蓝高光与悬停底色，额度仍使用绿/黄/红。收起时徽标轻微回弹、展开按可见账号轻量依次显现；展开收起过渡由原生图层处理，隐藏或休眠停止，没有实时模糊或逐帧应用计时器。静置不播放循环动画；具体资源占用取决于账号数量与查询状态，不承诺零占用。
 
@@ -139,31 +139,31 @@
 
 目前适配的是订阅额度，**不包含第三方 API 中转站余额**。仅 Claude Code 使用第三方 API Key 时，无法据此查询 Claude 官方订阅。登录完全失效、网页验证或服务接口变化时，可能需要在原应用重新登录/验证。Antigravity 旧 IDE 版与其他凭据存储格式尚未保证兼容。
 
-这些额度接口并非全部稳定公开 API，首次发布不代表所有账户类型、系统版本和网络环境都已经实机覆盖。兼容问题请使用 [问题模板](https://github.com/bcblr1993/NotchQuota/issues/new/choose) 反馈；不要上传凭据、Cookie 或完整认证文件。
+这些额度接口并非全部稳定公开 API，首次发布不代表所有账户类型、系统版本和网络环境都已经实机覆盖。兼容问题请使用 [问题模板](https://github.com/bcblr1993/AetherNotchQuota/issues/new/choose) 反馈；不要上传凭据、Cookie 或完整认证文件。
 
 ## 开发
 
 需要 Xcode 15+ / Swift 5.9+，macOS。源码以 Swift Package 管理，可直接用 Xcode 打开 `Package.swift`。
 
 ```sh
-git clone https://github.com/bcblr1993/NotchQuota.git
-cd NotchQuota
+git clone https://github.com/bcblr1993/AetherNotchQuota.git
+cd AetherNotchQuota
 swift test
 ./scripts/build-app.sh
-open build/NotchQuota.app
+open build/AetherNotchQuota.app
 ```
 
 本地构建默认使用临时签名；这种构建不等同于已经公证的发行版。
 
 ```sh
 # 仅使用演示数据，绝不读取真实凭据
-build/NotchQuota.app/Contents/MacOS/NotchQuota --demo
+build/AetherNotchQuota.app/Contents/MacOS/NotchQuota --demo
 
 # 只输出脱敏的额度/连接状态，不输出认证信息
-build/NotchQuota.app/Contents/MacOS/NotchQuota --diagnose
+build/AetherNotchQuota.app/Contents/MacOS/NotchQuota --diagnose
 
 # 原生窗口截屏及 15 秒收起与自动轮换验证
-NOTCHQUOTA_SMOKE_DIR=/path/to/output build/NotchQuota.app/Contents/MacOS/NotchQuota --ui-smoke
+NOTCHQUOTA_SMOKE_DIR=/path/to/output build/AetherNotchQuota.app/Contents/MacOS/NotchQuota --ui-smoke
 ```
 
 项目结构、发布方式、隐私边界分别见 [架构](docs/ARCHITECTURE.md)、[发布维护](docs/RELEASING.md)、[隐私](PRIVACY.md)。
