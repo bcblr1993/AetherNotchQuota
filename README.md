@@ -85,6 +85,8 @@
 
 从 [Releases](https://github.com/bcblr1993/AetherNotchQuota/releases/latest) 下载 `AetherNotchQuota-<版本>-macos-arm64.dmg`，打开后将 **AetherNotchQuota** 拖入 **Applications**，再启动。
 
+从 `NotchQuota` 0.1.17 或更早版本迁移时，请先退出旧应用并手动安装新版。旧版本仍指向已停用的 GitHub 更新地址，无法再通过应用内更新。确认新版正常启动后，可移除 `/Applications/NotchQuota.app`；账号与偏好使用原有 Bundle ID 保留。如曾开启登录时启动，请在新版中确认该设置仍有效。
+
 正式发布的 DMG 使用 Developer ID 签名并经过 Apple 公证。首次下载后系统仍可能显示正常的“从互联网下载”确认。
 
 需要先在相应软件登录过订阅账号，并有可用的网络连接。macOS 首次询问读取登录钥匙串时，请按需允许。**无需安装 Homebrew、Python、Node 或命令行工具**。Codex 已安装的后台命令行组件仅在它的登录过期时用于续期。
