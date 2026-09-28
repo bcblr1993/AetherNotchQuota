@@ -22,7 +22,7 @@ jobs:
         run: scripts/check-release.sh
       - name: Archive CI build (not notarized)
         run: ditto -c -k --keepParent build/AetherNotchQuota.app build/AetherNotchQuota-CI-arm64.zip
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: AetherNotchQuota-CI-arm64-not-notarized
           path: build/AetherNotchQuota-CI-arm64.zip
