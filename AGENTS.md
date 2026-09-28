@@ -1,4 +1,4 @@
-# NotchQuota maintenance
+# AetherNotchQuota maintenance
 
 - 默认中文交流；代码和符号名使用英文。
 - 这是 macOS 13+ / Apple Silicon 原生 Swift Package，除原生更新组件 Sparkle 外无第三方运行时依赖；更新归 Sparkle 管理，不自行下载执行未验证代码。
