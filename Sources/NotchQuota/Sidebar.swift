@@ -309,7 +309,7 @@ final class SidebarSurface: NSView {
     private var reminderCycle = ReminderCycle()
     var onReminderRefresh: ((String) async -> OverviewAccount?)?
     private var canRemind: Bool {
-        appearance == .ghost && collapsed && panel.isVisible && !dragging && !pinned &&
+        appearance.isCharacter && collapsed && panel.isVisible && !dragging && !pinned &&
             !pointerInBar && !pointerInDetail && !detail.isVisible
     }
     func showQuotaRecovery(accountID: String, windows: [String], style: RecoveryStyle? = nil) {
@@ -346,7 +346,7 @@ final class SidebarSurface: NSView {
         }
     }
     private func syncReminder() {
-        if appearance == .ghost, panel.isVisible, persist {
+        if appearance.isCharacter, panel.isVisible, persist {
             reminder.tick = { [weak self] in self?.showThoughtReminder() }
             reminder.start()
         } else { reminder.stop() }
@@ -359,6 +359,7 @@ final class SidebarSurface: NSView {
     func setAppearance(_ value: SidebarAppearance) {
         guard appearance != value else { return }
         cancelExpand()
+        reminderTask?.cancel(); reminderTask = nil; reminder.hide()
         appearance = value
         configureEmblem(); updateEmblemStatus(); position(); updateEmblemIdle(); syncReminder()
         if persist { UserDefaults.standard.set(value.rawValue, forKey: SidebarAppearance.preferenceKey) }
@@ -371,7 +372,7 @@ final class SidebarSurface: NSView {
         surface.setAccessibilityLabel((account?.title ?? "额度") + " · " + (remaining.map { "剩余\(Int($0.rounded()))%" } ?? "额度暂不可用") + " · 移入展开")
     }
     private func layoutEmblem() {
-        let tucked = collapsed && docked && appearance == .ghost
+        let tucked = collapsed && docked && appearance.isCharacter
         emblem.face(right: !docked || right, docked: tucked, peeking: false)
         let x = tucked ? (right ? surface.bounds.width - 2 * appearance.scale : 2 * appearance.scale) : surface.bounds.midX
         emblem.position = CGPoint(x: x, y: surface.bounds.midY)
@@ -415,7 +416,7 @@ final class SidebarSurface: NSView {
             expanded.origin.x = screen.visibleFrame.minX + anchor.x * screen.visibleFrame.width - expanded.width / 2
             expanded.origin.y = screen.visibleFrame.minY + anchor.y * screen.visibleFrame.height - expanded.height / 2
         }
-        let frame = collapsed ? SidebarLayout.collapsedFrame(expanded: expanded, screen: screen.visibleFrame, docked: docked, right: right, peeking: pointerInBar, scale: appearance.scale, halfHidden: appearance == .ghost) : expanded
+        let frame = collapsed ? SidebarLayout.collapsedFrame(expanded: expanded, screen: screen.visibleFrame, docked: docked, right: right, peeking: pointerInBar, scale: appearance.scale, halfHidden: appearance.isCharacter) : expanded
         panel.setFrame(frame, display: true)
         scroll.isHidden = collapsed
         surface.setChromeVisible(!collapsed)

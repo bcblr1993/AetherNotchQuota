@@ -3,16 +3,20 @@ import QuartzCore
 
 /// Stable persisted values; unknown values from future versions fall back safely.
 enum SidebarAppearance: String, CaseIterable {
-    case capsule, orb, gauge, ghost
+    case capsule, orb, gauge, ghost, bunny, bear, cloud
     static let preferenceKey = "sidebarAppearance"
     static func restored(_ value: String?) -> Self { value.flatMap(Self.init(rawValue:)) ?? .capsule }
-    var scale: CGFloat { self == .ghost ? 2.25 : 1.5 }
+    var isCharacter: Bool { [.ghost, .bunny, .bear, .cloud].contains(self) }
+    var scale: CGFloat { isCharacter ? 2.25 : 1.5 }
     var title: String {
         switch self {
         case .capsule: return "原生胶囊"
         case .orb: return "磨砂圆球"
         case .gauge: return "迷你仪表"
         case .ghost: return "小幽灵"
+        case .bunny: return "奶油小兔"
+        case .bear: return "蜂蜜小熊"
+        case .cloud: return "云朵团子"
         }
     }
 }
@@ -21,6 +25,7 @@ enum SidebarAppearance: String, CaseIterable {
 final class SidebarEmblem: CALayer {
     private let indicator = CAShapeLayer(), valueLabel = CATextLayer(), eyes = CALayer()
     private var leaningBody: CALayer?
+    private var returnCleanup: DispatchWorkItem?
     private(set) var appearance: SidebarAppearance = .capsule
     override init() { super.init(); bounds = CGRect(x: 0, y: 0, width: 36, height: 36) }
     override init(layer: Any) { super.init(layer: layer) }
@@ -110,8 +115,15 @@ final class SidebarEmblem: CALayer {
             for child in bodyLayers { child.removeFromSuperlayer(); leaningBody.addSublayer(child) }
             self.leaningBody = leaningBody
             addSublayer(leaningBody)
+        case .bunny, .bear, .cloud:
+            let character = SidebarMascotArtwork.make(style: style, eyes: eyes)
+            character.bounds = bounds
+            character.anchorPoint = CGPoint(x: 27.0 / 36, y: 13.0 / 36)
+            character.position = CGPoint(x: 27, y: 13)
+            leaningBody = character
+            addSublayer(character)
         }
-        if style != .ghost { addSublayer(indicator) }
+        if !style.isCharacter { addSublayer(indicator) }
     }
     private func body(_ path: CGPath, colors: [NSColor]) {
         let gradient = CAGradientLayer(); gradient.frame = bounds
@@ -130,40 +142,54 @@ final class SidebarEmblem: CALayer {
         valueLabel.string = remaining.map { "\(Int($0.rounded()))%" } ?? "—"
         CATransaction.commit()
     }
-    func stopMotion() { removeAllAnimations(); eyes.removeAllAnimations() }
+    func stopMotion() {
+        returnCleanup?.cancel(); returnCleanup = nil
+        removeAllAnimations(); eyes.removeAllAnimations()
+    }
     var hasMotion: Bool { animationKeys()?.isEmpty == false || eyes.animationKeys()?.isEmpty == false }
     var hasReturnMotion: Bool { animation(forKey: "returnHop") != nil && eyes.animation(forKey: "returnBlink") != nil }
     func playReturn() {
-        guard appearance == .ghost else { return }
+        guard appearance.isCharacter else { return }
+        returnCleanup?.cancel()
         let hop = CAKeyframeAnimation(keyPath: "transform.translation.y")
         hop.values = [0, -2.2, 0.8, 0]
         hop.keyTimes = [0, 0.28, 0.68, 1]
+        hop.beginTime = convertTime(CACurrentMediaTime(), from: nil)
         hop.duration = 0.38; hop.calculationMode = .cubic
         add(hop, forKey: "returnHop")
         let blink = CAKeyframeAnimation(keyPath: "transform.scale.y")
         blink.values = [1, 0.14, 1]
         blink.keyTimes = [0, 0.42, 1]
-        blink.beginTime = CACurrentMediaTime() + 0.14
+        blink.beginTime = eyes.convertTime(CACurrentMediaTime(), from: nil) + 0.14
         blink.duration = 0.23
         eyes.add(blink, forKey: "returnBlink")
+        // AppKit may defer retiring animations while a clipped panel changes size.
+        // One bounded cleanup prevents old motion from surviving that transition.
+        let cleanup = DispatchWorkItem { [weak self] in
+            self?.removeAnimation(forKey: "returnHop")
+            self?.eyes.removeAnimation(forKey: "returnBlink")
+            self?.returnCleanup = nil
+        }
+        returnCleanup = cleanup
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5, execute: cleanup)
     }
     func idle(_ enabled: Bool) {
         guard enabled else { removeAnimation(forKey: "idleFloat"); eyes.removeAllAnimations(); return }
         guard animation(forKey: "idleFloat") == nil else { return }
         let float = CAKeyframeAnimation(keyPath: "transform.translation.y")
-        float.values = [0, 0, appearance == .ghost ? 1.8 : 0.8, 0, 0]
+        float.values = [0, 0, appearance.isCharacter ? 1.8 : 0.8, 0, 0]
         float.keyTimes = [0, 0.70, 0.84, 0.96, 1]; float.duration = 10
         float.repeatCount = .infinity; float.calculationMode = .cubic; add(float, forKey: "idleFloat")
-        if appearance == .ghost {
+        if appearance.isCharacter {
             let blink = CAKeyframeAnimation(keyPath: "transform.scale.y")
             blink.values = [1, 1, 0.12, 1, 1]; blink.keyTimes = [0, 0.8, 0.82, 0.85, 1]
             blink.duration = 7; blink.repeatCount = .infinity; eyes.add(blink, forKey: "blink")
         }
     }
     func face(right: Bool, docked: Bool, peeking: Bool) {
-        // Only edge-docked ghosts lean; a free-floating ghost stands upright.
+        // Only edge-docked characters lean; a free-floating character stands upright.
         leaningBody?.transform = docked ? CATransform3DMakeRotation(14 * .pi / 180, 0, 0, 1) : CATransform3DIdentity
         // Mirror only the character, never quota text.
-        sublayerTransform = CATransform3DMakeScale((appearance == .ghost && !right ? -1 : 1) * appearance.scale, appearance.scale, 1)
+        sublayerTransform = CATransform3DMakeScale((appearance.isCharacter && !right ? -1 : 1) * appearance.scale, appearance.scale, 1)
     }
 }

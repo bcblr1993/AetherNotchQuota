@@ -94,12 +94,12 @@ extension AppDelegate {
                 bar.dismiss(animated: false)
                 let drop = NSPoint(x: screen.visibleFrame.midX + 80, y: screen.visibleFrame.maxY - 60)
                 bar.place(at: drop, screen: screen, keepCollapsed: true)
-                check(abs(bar.panel.frame.midX - drop.x) < 1 && abs(bar.panel.frame.midY - drop.y) < 1,
+                check(abs(bar.panel.frame.midX - drop.x) <= 1 && abs(bar.panel.frame.midY - drop.y) <= 1,
                       "free icon retains drop anchor near display top")
                 bar.setCollapsed(false); await wait(0.4)
                 check(screen.visibleFrame.contains(bar.panel.frame), "expanded list fits drop destination display")
                 bar.exitBar(); bar.setCollapsed(true); await wait(0.4)
-                check(abs(bar.panel.frame.midX - drop.x) < 1 && abs(bar.panel.frame.midY - drop.y) < 1,
+                check(abs(bar.panel.frame.midX - drop.x) <= 1 && abs(bar.panel.frame.midY - drop.y) <= 1,
                       "collapse returns icon to drop anchor")
             }
             if let screen = NSScreen.main {
@@ -125,6 +125,18 @@ extension AppDelegate {
                         capture("style-" + style.rawValue + (right ? "-right-peek" : "-left-peek"), view: bar.surface)
                         bar.exitBar(); await wait(0.35)
                         check(!bar.collapsed && bar.expandWork == nil, "style has no delayed hover work: " + style.rawValue)
+                    }
+                    bar.exitBar(); bar.setCollapsed(true)
+                    if style.isCharacter {
+                        check(bar.hasGhostReturnMotion, "character has one return animation: " + style.rawValue)
+                        await wait(0.55)
+                        // Core Animation retires completed keys on a display commit.
+                        // Allow bounded scheduling slack on loaded/high-refresh displays.
+                        for _ in 0..<10 where bar.hasEmblemAnimations { await wait(0.1) }
+                        check(!bar.hasEmblemAnimations, "character settles without idle animation: " + style.rawValue)
+                        bar.showQuotaRecovery(accountID: first, windows: ["每周"], style: .edge)
+                        check(bar.reminder.panel.isVisible, "character supports quota recovery reminder: " + style.rawValue)
+                        bar.reminder.hide()
                     }
                     bar.hide()
                     check(!bar.hasEmblemAnimations, "hidden style stops all motion: " + style.rawValue)

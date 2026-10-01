@@ -31,10 +31,10 @@ try:
     else:
         probe = root / '.build/performance/probe'
         with (out / 'resources.jsonl').open('w') as log:
-            recorder = subprocess.Popen([str(probe), '110', '5', str(process.pid)], stdout=log)
+            recorder = subprocess.Popen([str(probe), '180', '5', str(process.pid)], stdout=log)
     children.append(recorder)
     print(f'Sidebar test PID {process.pid}; output {out}', flush=True)
-    result = process.wait(timeout=125)
+    result = process.wait(timeout=185)
     recorder.wait(timeout=240 if args.trace else 25)
     text = (out / 'scenarios.log').read_text()
     assert result == 0 and 'SIDEBAR COMPLETE: PASS' in text and ': FAIL' not in text, 'Sidebar interaction checks failed'

@@ -2,6 +2,24 @@ import XCTest
 @testable import NotchQuota
 
 final class SidebarTests: XCTestCase {
+    func testCharacterSwitchingCancelsMotionAndKeepsOldStyleValuesStable() {
+        let emblem = SidebarEmblem()
+        for style in [SidebarAppearance.ghost, .bunny, .bear, .cloud] {
+            emblem.configure(style)
+            XCTAssertFalse(emblem.hasMotion)
+            emblem.playReturn()
+            XCTAssertTrue(emblem.hasReturnMotion)
+            XCTAssertEqual(emblem.animation(forKey: "returnHop")?.repeatCount, 0)
+            emblem.configure(.capsule)
+            XCTAssertFalse(emblem.hasMotion)
+            XCTAssertFalse(emblem.hasReturnMotion)
+        }
+        XCTAssertEqual(SidebarAppearance.restored("ghost"), .ghost)
+        XCTAssertEqual(SidebarAppearance.restored("orb"), .orb)
+        for style in SidebarAppearance.allCases {
+            XCTAssertNotNil(style.menuIcon)
+        }
+    }
     func testAppearanceRestoresAndUnknownPreferenceFallsBack() {
         XCTAssertEqual(SidebarAppearance.restored(nil), .capsule)
         XCTAssertEqual(SidebarAppearance.restored("unknown-future-style"), .capsule)

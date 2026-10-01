@@ -440,6 +440,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             for style in SidebarAppearance.allCases {
                 let item = NSMenuItem(title: style.title, action: #selector(changeSidebarAppearance(_:)), keyEquivalent: "")
                 item.target = self; item.representedObject = style.rawValue
+                item.image = style.menuIcon
                 item.state = sidebar?.appearance == style ? .on : .off
                 appearanceMenu.addItem(item)
             }
