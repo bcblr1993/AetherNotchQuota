@@ -38,6 +38,15 @@ enum SidebarLayout {
         return NSRect(x: docked ? (right ? screen.maxX - width : screen.minX) : min(screen.maxX - width, max(screen.minX, expanded.midX - width / 2)),
                       y: min(screen.maxY - height, max(screen.minY, expanded.midY - height / 2)), width: width, height: height)
     }
+    /// Native popup menus use screen coordinates. Keep their root on the inside
+    /// of the source window rather than trusting a context click at the display edge.
+    static func menuAnchor(size: NSSize, window: NSRect, screen: NSRect, clickY: CGFloat) -> NSPoint {
+        let inset: CGFloat = 8
+        let desiredX = window.midX >= screen.midX ? window.minX - size.width - inset : window.maxX + inset
+        let x = min(max(screen.minX + inset, desiredX), max(screen.minX + inset, screen.maxX - size.width - inset))
+        let y = min(max(screen.minY + size.height + inset, clickY), screen.maxY - inset)
+        return NSPoint(x: x, y: y)
+    }
     static func detailFrame(bar: NSRect, rowY: CGFloat, size: NSSize, screen: NSRect, right: Bool) -> NSRect {
         let width = min(size.width, screen.width - 24), height = min(size.height, screen.height - 24)
         let x = right ? bar.minX - width - 8 : bar.maxX + 8
@@ -701,8 +710,13 @@ final class SidebarSurface: NSView {
             controller.onMenu = { [weak self] event, view in
                 guard let self else { return }
                 let menu = self.makeMenu(); self.activeMenu = menu
-                if let event { NSMenu.popUpContextMenu(menu, with: event, for: view) }
-                else { menu.popUp(positioning: nil, at: NSPoint(x: view.bounds.midX, y: view.bounds.minY), in: view) }
+                guard let window = view.window else { self.activeMenu = nil; return }
+                let screen = window.screen ?? self.sidebar?.panel.screen ?? NSScreen.main
+                guard let screen else { self.activeMenu = nil; return }
+                let clickY = event.map { window.convertPoint(toScreen: $0.locationInWindow).y } ?? window.frame.maxY - 12
+                let anchor = SidebarLayout.menuAnchor(size: menu.size, window: window.frame,
+                                                      screen: screen.visibleFrame, clickY: clickY)
+                menu.popUp(positioning: nil, at: anchor, in: nil)
                 self.activeMenu = nil
             }
             sidebar = controller

@@ -2,6 +2,24 @@ import XCTest
 @testable import NotchQuota
 
 final class SidebarTests: XCTestCase {
+    func testPopupMenuStaysInsideSourceDisplayAtBothEdges() {
+        let size = CGSize(width: 240, height: 320)
+        for screen in [CGRect(x: 0, y: 0, width: 1728, height: 1084),
+                       CGRect(x: -1920, y: 200, width: 1920, height: 1080),
+                       CGRect(x: 100, y: -900, width: 1440, height: 900)] {
+            for right in [false, true] {
+                let window = SidebarLayout.frame(count: 8, screen: screen, right: right, fraction: 0.5)
+                for clickY in [screen.minY, screen.midY, screen.maxY] {
+                    let anchor = SidebarLayout.menuAnchor(size: size, window: window, screen: screen, clickY: clickY)
+                    let menu = CGRect(x: anchor.x, y: anchor.y - size.height, width: size.width, height: size.height)
+                    XCTAssertTrue(screen.contains(menu))
+                    XCTAssertFalse(menu.intersects(window))
+                    XCTAssertEqual(right ? window.minX - menu.maxX : menu.minX - window.maxX, 8)
+                }
+            }
+        }
+    }
+
     func testCharacterSwitchingCancelsMotionAndKeepsOldStyleValuesStable() {
         let emblem = SidebarEmblem()
         for style in [SidebarAppearance.ghost, .bunny, .bear, .cloud] {

@@ -102,6 +102,25 @@ extension AppDelegate {
                 check(abs(bar.panel.frame.midX - drop.x) <= 1 && abs(bar.panel.frame.midY - drop.y) <= 1,
                       "collapse returns icon to drop anchor")
             }
+            let contextMenu = makeMenu()
+            for screen in NSScreen.screens {
+                for right in [false, true] {
+                    let source = SidebarLayout.frame(count: 8, screen: screen.visibleFrame, right: right, fraction: 0.5)
+                    for clickY in [screen.visibleFrame.minY, screen.visibleFrame.midY, screen.visibleFrame.maxY] {
+                        let anchor = SidebarLayout.menuAnchor(size: contextMenu.size, window: source,
+                                                              screen: screen.visibleFrame, clickY: clickY)
+                        let frame = NSRect(x: anchor.x, y: anchor.y - contextMenu.size.height,
+                                           width: contextMenu.size.width, height: contextMenu.size.height)
+                        check(screen.visibleFrame.contains(frame), "native context menu root fits source display at edge")
+                    }
+                }
+                func checkSubmenus(_ menu: NSMenu) {
+                    check(menu.size.width < screen.visibleFrame.width - 16 && menu.size.height < screen.visibleFrame.height - 16,
+                          "native menu labels fit without scrolling")
+                    for child in menu.items.compactMap(\.submenu) { checkSubmenus(child) }
+                }
+                checkSubmenus(contextMenu)
+            }
             if let screen = NSScreen.main {
                 bar.place(at: NSPoint(x: screen.visibleFrame.midX, y: screen.visibleFrame.midY), screen: screen)
                 check(!bar.docked && abs(bar.panel.frame.midX - screen.visibleFrame.midX) < 1, "drag placement supports free floating position")
