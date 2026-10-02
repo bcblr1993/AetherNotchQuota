@@ -70,11 +70,78 @@ enum SidebarMascotArtwork {
             star.addQuadCurve(to: CGPoint(x: 24, y: 29), control: CGPoint(x: 28, y: 28))
             star.addQuadCurve(to: CGPoint(x: 28, y: 34), control: CGPoint(x: 28, y: 30)); star.closeSubpath()
             gradient(star, [cream, color(1, 0.80, 0.46)], in: scene)
+        case .cat:
+            let orange = color(0.98, 0.69, 0.39)
+            let tail = CGMutablePath(); tail.move(to: CGPoint(x: 27, y: 5))
+            tail.addCurve(to: CGPoint(x: 31, y: 15), control1: CGPoint(x: 38, y: 2), control2: CGPoint(x: 35, y: 13))
+            stroke(tail, orange, width: 4, in: scene)
+            gradient(CGPath(roundedRect: CGRect(x: 8, y: 3, width: 21, height: 23), cornerWidth: 9, cornerHeight: 9, transform: nil), [cream, orange], in: scene)
+            for points in [[CGPoint(x: 5, y: 24), CGPoint(x: 5, y: 35), CGPoint(x: 16, y: 29)],
+                           [CGPoint(x: 21, y: 29), CGPoint(x: 30, y: 35), CGPoint(x: 32, y: 23)]] {
+                shape(polygon(points), orange, in: scene)
+            }
+            gradient(CGPath(ellipseIn: CGRect(x: 3, y: 12, width: 30, height: 20), transform: nil), [color(1, 0.87, 0.62), orange], in: scene)
+            shape(polygon([CGPoint(x: 7, y: 29), CGPoint(x: 7, y: 32), CGPoint(x: 11, y: 29)]), pink, in: scene)
+            shape(polygon([CGPoint(x: 26, y: 29), CGPoint(x: 29, y: 32), CGPoint(x: 29, y: 28)]), pink, in: scene)
+            for x: CGFloat in [15, 19, 23] {
+                let stripe = CGMutablePath(); stripe.move(to: CGPoint(x: x, y: 30)); stripe.addLine(to: CGPoint(x: x - 1, y: 27))
+                stroke(stripe, color(0.82, 0.43, 0.25), width: 1.2, in: scene)
+            }
+            oval(CGRect(x: 11, y: 13, width: 14, height: 6), cream, in: scene)
+            face(eyes, at: 22, in: scene)
+            shape(polygon([CGPoint(x: 16.5, y: 18), CGPoint(x: 19.5, y: 18), CGPoint(x: 18, y: 16)]), pink, in: scene)
+            smile(at: CGPoint(x: 18, y: 15.7), in: scene)
+            for x: CGFloat in [5, 27] {
+                let whisker = CGMutablePath(); whisker.move(to: CGPoint(x: x, y: 17)); whisker.addLine(to: CGPoint(x: x + 4, y: 16.5))
+                stroke(whisker, color(0.68, 0.40, 0.30), width: 0.6, in: scene)
+            }
+        case .fox:
+            let rust = color(0.85, 0.39, 0.24)
+            // Sharper ears and cheek tufts distinguish the fox from the soft round animals.
+            shape(polygon([CGPoint(x: 8, y: 6), CGPoint(x: 1, y: 13), CGPoint(x: 5, y: 23),
+                           CGPoint(x: 4, y: 35), CGPoint(x: 16, y: 29), CGPoint(x: 23, y: 29),
+                           CGPoint(x: 32, y: 35), CGPoint(x: 31, y: 23), CGPoint(x: 35, y: 13), CGPoint(x: 27, y: 6)]), rust, in: scene)
+            shape(polygon([CGPoint(x: 6, y: 31), CGPoint(x: 8, y: 24), CGPoint(x: 13, y: 27)]), ink, in: scene)
+            shape(polygon([CGPoint(x: 29, y: 31), CGPoint(x: 24, y: 27), CGPoint(x: 29, y: 24)]), ink, in: scene)
+            shape(polygon([CGPoint(x: 5, y: 19), CGPoint(x: 17, y: 15), CGPoint(x: 30, y: 19),
+                           CGPoint(x: 26, y: 8), CGPoint(x: 18, y: 3), CGPoint(x: 9, y: 8)]), cream, in: scene)
+            face(eyes, at: 23, in: scene)
+            oval(CGRect(x: 16, y: 14, width: 4, height: 2.5), ink, in: scene)
+            smile(at: CGPoint(x: 18, y: 12.8), in: scene)
+        case .panda:
+            let charcoal = color(0.24, 0.27, 0.31)
+            for x: CGFloat in [3, 25] { oval(CGRect(x: x, y: 26, width: 9, height: 9), charcoal, in: scene) }
+            oval(CGRect(x: 8, y: 2, width: 8, height: 6), charcoal, in: scene)
+            oval(CGRect(x: 22, y: 2, width: 8, height: 6), charcoal, in: scene)
+            gradient(CGPath(roundedRect: CGRect(x: 7, y: 4, width: 23, height: 24), cornerWidth: 10, cornerHeight: 10, transform: nil), [cream, color(0.86, 0.90, 0.87)], in: scene)
+            gradient(CGPath(ellipseIn: CGRect(x: 3, y: 11, width: 30, height: 22), transform: nil), [color(1, 1, 0.97), color(0.90, 0.93, 0.91)], in: scene)
+            for x: CGFloat in [8, 20] { oval(CGRect(x: x, y: 18, width: 8, height: 9), charcoal, in: scene) }
+            face(eyes, at: 23, in: scene)
+            oval(CGRect(x: 16.4, y: 16, width: 3.2, height: 2.3), charcoal, in: scene)
+            smile(at: CGPoint(x: 18, y: 14.6), in: scene)
+            // Small mint leaf, kept behind the face, gives the monochrome character an accent.
+            shape(polygon([CGPoint(x: 27, y: 8), CGPoint(x: 34, y: 13), CGPoint(x: 32, y: 5)]), color(0.47, 0.72, 0.55), in: scene)
+        case .penguin:
+            let blue = color(0.34, 0.49, 0.66)
+            oval(CGRect(x: 4, y: 9, width: 8, height: 16), blue, in: scene)
+            oval(CGRect(x: 25, y: 9, width: 8, height: 16), blue, in: scene)
+            gradient(CGPath(roundedRect: CGRect(x: 6, y: 4, width: 25, height: 29), cornerWidth: 12, cornerHeight: 12, transform: nil), [color(0.65, 0.79, 0.89), blue], in: scene)
+            oval(CGRect(x: 10, y: 6, width: 17, height: 22), cream, in: scene)
+            face(eyes, at: 23, in: scene)
+            shape(polygon([CGPoint(x: 15, y: 18), CGPoint(x: 21, y: 18), CGPoint(x: 18, y: 14)]), color(1, 0.72, 0.35), in: scene)
+            for x: CGFloat in [9, 22] { oval(CGRect(x: x, y: 2, width: 7, height: 4), color(1, 0.72, 0.35), in: scene) }
         default: break
         }
         return scene
     }
 
+    private static func polygon(_ points: [CGPoint]) -> CGPath {
+        let path = CGMutablePath(); path.addLines(between: points); path.closeSubpath(); return path
+    }
+    private static func stroke(_ path: CGPath, _ color: NSColor, width: CGFloat, in scene: CALayer) {
+        let layer = CAShapeLayer(); layer.path = path; layer.fillColor = nil
+        layer.strokeColor = color.cgColor; layer.lineWidth = width; layer.lineCap = .round; scene.addSublayer(layer)
+    }
     private static func face(_ eyes: CALayer, at y: CGFloat, in scene: CALayer) {
         eyes.frame = scene.bounds
         for x: CGFloat in [11.5, 22] {
@@ -106,11 +173,11 @@ enum SidebarMascotArtwork {
 }
 
 extension SidebarAppearance {
-    /// Cache tiny raster thumbnails, not seven live character scenes.
+    /// Cache tiny raster thumbnails, not live character scenes.
     var menuIcon: NSImage? { Self.menuIcons[self] }
     private static let menuIcons: [Self: NSImage] = {
         var icons: [Self: NSImage] = [:]
-        for style in allCases {
+        for style in selectable {
             guard let context = CGContext(data: nil, width: 48, height: 48, bitsPerComponent: 8, bytesPerRow: 0,
                                           space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue) else { continue }
             let emblem = SidebarEmblem(); emblem.configure(style); emblem.update(remaining: 75, scale: 2)

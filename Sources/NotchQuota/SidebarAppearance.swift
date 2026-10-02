@@ -3,10 +3,15 @@ import QuartzCore
 
 /// Stable persisted values; unknown values from future versions fall back safely.
 enum SidebarAppearance: String, CaseIterable {
-    case capsule, orb, gauge, ghost, bunny, bear, cloud
+    case capsule, orb, gauge, ghost, bunny, bear, cloud, cat, fox, panda, penguin
     static let preferenceKey = "sidebarAppearance"
-    static func restored(_ value: String?) -> Self { value.flatMap(Self.init(rawValue:)) ?? .capsule }
-    var isCharacter: Bool { [.ghost, .bunny, .bear, .cloud].contains(self) }
+    /// Legacy styles remain decodable, but are no longer offered in the menu.
+    static let selectable: [Self] = [.ghost, .bunny, .bear, .cloud, .cat, .fox, .panda, .penguin]
+    static func restored(_ value: String?) -> Self {
+        guard let style = value.flatMap(Self.init(rawValue:)), selectable.contains(style) else { return .ghost }
+        return style
+    }
+    var isCharacter: Bool { Self.selectable.contains(self) }
     var scale: CGFloat { isCharacter ? 2.25 : 1.5 }
     var title: String {
         switch self {
@@ -17,6 +22,10 @@ enum SidebarAppearance: String, CaseIterable {
         case .bunny: return "奶油小兔"
         case .bear: return "蜂蜜小熊"
         case .cloud: return "云朵团子"
+        case .cat: return "橘子小猫"
+        case .fox: return "枫糖小狐"
+        case .panda: return "糯米熊猫"
+        case .penguin: return "冰蓝企鹅"
         }
     }
 }
@@ -26,7 +35,7 @@ final class SidebarEmblem: CALayer {
     private let indicator = CAShapeLayer(), valueLabel = CATextLayer(), eyes = CALayer()
     private var leaningBody: CALayer?
     private var returnCleanup: DispatchWorkItem?
-    private(set) var appearance: SidebarAppearance = .capsule
+    private(set) var appearance: SidebarAppearance = .ghost
     override init() { super.init(); bounds = CGRect(x: 0, y: 0, width: 36, height: 36) }
     override init(layer: Any) { super.init(layer: layer) }
     required init?(coder: NSCoder) { fatalError() }
@@ -115,7 +124,7 @@ final class SidebarEmblem: CALayer {
             for child in bodyLayers { child.removeFromSuperlayer(); leaningBody.addSublayer(child) }
             self.leaningBody = leaningBody
             addSublayer(leaningBody)
-        case .bunny, .bear, .cloud:
+        case .bunny, .bear, .cloud, .cat, .fox, .panda, .penguin:
             let character = SidebarMascotArtwork.make(style: style, eyes: eyes)
             character.bounds = bounds
             character.anchorPoint = CGPoint(x: 27.0 / 36, y: 13.0 / 36)

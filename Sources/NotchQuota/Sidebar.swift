@@ -239,7 +239,7 @@ final class SidebarSurface: NSView {
     private var pointerInBar = false, pointerInDetail = false, dragging = false
     private var dragMonitor: Any?
     private let emblem = SidebarEmblem()
-    private(set) var appearance: SidebarAppearance = .capsule
+    private(set) var appearance: SidebarAppearance = .ghost
     private var screenID: UInt32?
     private var motion: TimeInterval = 0.2
     private var generation = 0

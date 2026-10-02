@@ -122,6 +122,7 @@ extension AppDelegate {
                 checkSubmenus(contextMenu)
             }
             if let screen = NSScreen.main {
+                bar.setAppearance(.capsule)
                 bar.place(at: NSPoint(x: screen.visibleFrame.midX, y: screen.visibleFrame.midY), screen: screen)
                 check(!bar.docked && abs(bar.panel.frame.midX - screen.visibleFrame.midX) < 1, "drag placement supports free floating position")
                 bar.exitBar(); bar.scheduleIdleCollapse(after: 0.1); await wait(0.6)
@@ -129,7 +130,7 @@ extension AppDelegate {
                 check(!bar.surface.chromeVisible && bar.surface.layer?.borderWidth == 0 && bar.surface.layer?.backgroundColor == nil,
                       "collapsed emblem has no capsule background or border")
                 capture("sidebar-capsule", view: bar.surface)
-                for style in SidebarAppearance.allCases {
+                for style in SidebarAppearance.selectable {
                     bar.setAppearance(style)
                     check(bar.appearance == style && bar.collapsed, "appearance switch preserves collapsed state: " + style.rawValue)
                     capture("style-" + style.rawValue + "-floating", view: bar.surface)

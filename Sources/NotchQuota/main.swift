@@ -437,7 +437,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             collapse.target = self; collapse.state = sidebar?.autoCollapse == true ? .on : .off
             settingsMenu.addItem(collapse)
             let appearanceMenu = NSMenu(); appearanceMenu.minimumWidth = 160
-            for style in SidebarAppearance.allCases {
+            for style in SidebarAppearance.selectable {
                 let item = NSMenuItem(title: style.title, action: #selector(changeSidebarAppearance(_:)), keyEquivalent: "")
                 item.target = self; item.representedObject = style.rawValue
                 item.image = style.menuIcon

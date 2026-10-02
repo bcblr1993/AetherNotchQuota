@@ -22,7 +22,7 @@ final class SidebarTests: XCTestCase {
 
     func testCharacterSwitchingCancelsMotionAndKeepsOldStyleValuesStable() {
         let emblem = SidebarEmblem()
-        for style in [SidebarAppearance.ghost, .bunny, .bear, .cloud] {
+        for style in SidebarAppearance.selectable {
             emblem.configure(style)
             XCTAssertFalse(emblem.hasMotion)
             emblem.playReturn()
@@ -33,15 +33,20 @@ final class SidebarTests: XCTestCase {
             XCTAssertFalse(emblem.hasReturnMotion)
         }
         XCTAssertEqual(SidebarAppearance.restored("ghost"), .ghost)
-        XCTAssertEqual(SidebarAppearance.restored("orb"), .orb)
-        for style in SidebarAppearance.allCases {
+        XCTAssertEqual(SidebarAppearance.restored("orb"), .ghost)
+        for style in SidebarAppearance.selectable {
+            XCTAssertTrue(style.isCharacter)
             XCTAssertNotNil(style.menuIcon)
         }
     }
     func testAppearanceRestoresAndUnknownPreferenceFallsBack() {
-        XCTAssertEqual(SidebarAppearance.restored(nil), .capsule)
-        XCTAssertEqual(SidebarAppearance.restored("unknown-future-style"), .capsule)
-        for style in SidebarAppearance.allCases {
+        XCTAssertEqual(SidebarAppearance.restored(nil), .ghost)
+        XCTAssertEqual(SidebarAppearance.restored("unknown-future-style"), .ghost)
+        for legacy in [SidebarAppearance.capsule, .orb, .gauge] {
+            XCTAssertEqual(SidebarAppearance.restored(legacy.rawValue), .ghost)
+            XCTAssertFalse(SidebarAppearance.selectable.contains(legacy))
+        }
+        for style in SidebarAppearance.selectable {
             XCTAssertEqual(SidebarAppearance.restored(style.rawValue), style)
         }
     }
