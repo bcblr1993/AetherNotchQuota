@@ -1,0 +1,206 @@
+# AetherNotchQuota 使用与高级说明
+
+产品概览、下载入口和快速开始见 [项目首页](../README.md)。
+
+[![CI](https://github.com/bcblr1993/AetherNotchQuota/actions/workflows/ci.yml/badge.svg)](https://github.com/bcblr1993/AetherNotchQuota/actions/workflows/ci.yml)
+[![下载最新版](https://img.shields.io/github/v/release/bcblr1993/AetherNotchQuota?label=下载最新版)](https://github.com/bcblr1993/AetherNotchQuota/releases/latest)
+
+轻量的 macOS AI 额度工具，在 **Codex、Claude、Antigravity** 之间查看剩余额度和重置时间。支持灵动岛、菜单栏和可自由拖动的侧边栏，也支持 Antigravity 多账号。
+
+**[下载安装](https://github.com/bcblr1993/AetherNotchQuota/releases/latest) · [使用方式](#安装) · [更新记录](../CHANGELOG.md) · [反馈问题](https://github.com/bcblr1993/AetherNotchQuota/issues/new/choose)**
+
+- **三种显示模式**：刘海附近紧凑显示、菜单栏点击查看，或在任意显示器上放置侧边栏。
+- **多账号，自选顺序**：勾选需要显示的账号，拖动调整排列，未勾选的账号不查询额度。
+- **小幽灵提醒**：每 10 分钟轮换检查一个账号，查询成功后冒出思考泡泡，约 5 秒后淡出；失败或旧数据跳过。5 小时或每周额度恢复至 100% 时，随机出现三种短暂庆祝动画之一。
+- **原应用无需常驻**：读取本机已有登录；仍需有效授权和网络连接。
+- **原生且轻量**：Swift / AppKit，无 Electron 或后台浏览器；仅使用 Sparkle 原生更新组件。
+- **安装即可运行**：支持 Apple Silicon（M 系列）、macOS 13+；提供签名、公证的 DMG、应用内更新和开机启动。
+
+## 实际界面
+
+图片为本次发布对应的原生界面渲染，不是概念设计图。额度、账号名称和时间为演示数据；透明区域会随 GitHub 的明暗主题显示不同底色。
+
+### 小幽灵与思考泡泡
+
+自由悬浮时直立，靠边后倾斜探出。空闲时，头顶用小圆点连接云朵，展示一个账号的额度及重置时间。
+
+<table>
+<tr><th>自由悬浮</th><th>靠边探出</th><th>额度提醒</th></tr>
+<tr>
+<td align="center"><img src="images/style-ghost-floating.png" width="90" alt="自由悬浮的小幽灵保持直立" /></td>
+<td align="center"><img src="images/style-ghost-right.png" width="50" alt="小幽灵在右侧屏幕边缘倾斜探出半个身体" /></td>
+<td><img src="images/thought-floating.png" width="292" alt="思考云朵展示 Claude 剩余 36% 和 5 小时窗口的重置时间" /></td>
+</tr>
+</table>
+
+提醒前先查询；查询失败、数据过期或额度未知时，依次检查下一个已勾选账号，全部不可用则不弹出。鼠标移入云朵暂停消失，移开后关闭；拖动、查看详情、临时隐藏与休眠时不打扰。
+
+### 可选择的角色外观
+
+提供八种卡通伙伴：小幽灵、奶油小兔、蜂蜜小熊、云朵团子、橘子小猫、枫糖小狐、糯米熊猫和冰蓝企鹅。右键 → 设置与更新 → 收起外观，选择后即时生效并保存；八种角色都支持思考泡泡和额度恢复提醒。
+
+<table>
+<tr><th>小幽灵</th><th>奶油小兔</th><th>蜂蜜小熊</th><th>云朵团子</th></tr>
+<tr>
+<td align="center"><img src="images/style-ghost-floating.png" width="90" alt="小幽灵" /></td>
+<td align="center"><img src="images/style-bunny-floating.png" width="90" alt="奶油小兔" /></td>
+<td align="center"><img src="images/style-bear-floating.png" width="90" alt="蜂蜜小熊" /></td>
+<td align="center"><img src="images/style-cloud-floating.png" width="90" alt="云朵团子" /></td>
+</tr>
+<tr><th>橘子小猫</th><th>枫糖小狐</th><th>糯米熊猫</th><th>冰蓝企鹅</th></tr>
+<tr>
+<td align="center"><img src="images/style-cat-floating.png" width="90" alt="橘子小猫" /></td>
+<td align="center"><img src="images/style-fox-floating.png" width="90" alt="枫糖小狐" /></td>
+<td align="center"><img src="images/style-panda-floating.png" width="90" alt="糯米熊猫" /></td>
+<td align="center"><img src="images/style-penguin-floating.png" width="90" alt="冰蓝企鹅" /></td>
+</tr>
+</table>
+
+### 侧边栏：多账号一起看，拖到哪块屏幕就留在哪块
+
+头像旁直接显示额度，悬停查看详情，点击可固定。可自由摆放，也可吸附左右边缘；鼠标跨屏不会带走它。收起外观提供小幽灵、奶油小兔、蜂蜜小熊、云朵团子、橘子小猫、枫糖小狐、糯米熊猫和冰蓝企鹅。
+
+<table>
+<tr><th>账号侧栏</th><th>悬停查看详情</th></tr>
+<tr>
+<td align="center"><img src="images/sidebar-strip.png" width="52" alt="侧边栏显示 Codex、Claude 和 Antigravity 的头像、额度环和百分比" /></td>
+<td><img src="images/sidebar-detail.png" width="320" alt="Codex 详情显示 5 小时和每周额度及重置时间，可点击固定" /></td>
+</tr>
+</table>
+
+### 菜单栏：点击打开一个紧凑面板
+
+每次显示一个账号的详细额度，点击头像循环切换，也可开启每分钟自动轮换。未提供的重置时间会明确标注，不自行推算。
+
+<img src="images/menu-single-detail.png" width="320" alt="菜单栏打开的单账号详情面板，点击头像可切换账号" />
+
+### 灵动岛：图标与百分比常驻
+
+收起时只显示提供商图标和额度，展开后查看各周期数据，15 秒无操作收起详情。只勾选一个账号时不会轮换。
+
+<table>
+<tr><th>紧凑显示</th><th>展开详情</th></tr>
+<tr>
+<td valign="top"><img src="images/compact.png" width="279" alt="灵动岛紧凑状态，仅显示应用图标和额度" /></td>
+<td><img src="images/details.png" width="279" alt="灵动岛展开后显示各周期剩余额度" /></td>
+</tr>
+</table>
+
+额度颜色统一为 **>50% 绿色、20–50% 黄色、<20% 红色**；未知额度显示灰色，不当作 0%。查询失败时详情保留并标注旧数据，思考提醒则跳过该账号。
+
+## Antigravity 多实例与账号排序
+
+<img src="images/multi-instance.png" width="279" alt="独立 Antigravity 实例使用工作别名显示额度，演示身份未加载头像时使用编号占位" />
+
+在「账号设置 → 调整账号顺序」中拖动排序，或用上移/下移（⌥↑ / ⌥↓）调整后保存。侧边栏排列、点击切换与自动轮换共用此顺序；重启后保留，隐藏账号的顺序记录也会保留。
+
+普通单实例保持原有体验。复制的 Antigravity 实例可在启动或右键“账号设置 → 重新扫描实例”时发现；额外实例默认不勾选。应用通过后台程序中的登录文件名线索寻找对应本地文件，只有唯一匹配才提供启用入口，不按 Second/Third 名称写死账号。
+
+右键“显示的应用”分别勾选需要显示的账号。启用后先核对 Google 账号身份，再读取额度和头像；多账号使用圆形头像，下载失败时用编号占位，菜单和展开详情保留实例名称。可在“账号设置”修改当前账号别名。原有主应用选择及自动轮换开关保留；只选一个不会轮换，未选中的账号不查询。
+
+不认识的多开方式可使用“账号设置 → 手动添加实例”，依次选择应用和登录文件。当前支持含 `token.access_token`、`token.refresh_token` 的 JSON（包括现有 base64 包装），不修改该文件。其他数据库或加密格式会明确拒绝，不猜测凭据。手动添加后仍需勾选启用。
+
+每个实例独立维护登录续期、项目、额度和头像；账号身份变化时清除旧头像/额度并暂停该项，需重新勾选确认。不会自动把同账号多实例的额度相加或合并不同服务环境。每个已选账号按原有 3 分钟周期刷新，任务间隔 2 秒发起；图片最多 1 MiB、解码后缩小至 48 像素，下载结果在进程内缓存 24 小时。原应用无需保持运行，授权失效时仍需重新登录。
+
+高级开发验证：`build/AetherNotchQuota.app/Contents/MacOS/NotchQuota --verify-accounts --force-refresh` 会实际读取所有自动识别的受支持实例（包括未勾选实例），强制验证续期、身份、额度和头像；只输出通过状态与数量，不输出令牌、邮箱或账号标识。普通运行不会执行此验证模式。
+
+## 安装
+
+从 [Releases](https://github.com/bcblr1993/AetherNotchQuota/releases/latest) 下载 `AetherNotchQuota-<版本>-macos-arm64.dmg`，打开后将 **AetherNotchQuota** 拖入 **Applications**，再启动。
+
+从 `NotchQuota` 0.1.17 或更早版本迁移时，请先退出旧应用并手动安装新版。旧版本仍指向已停用的 GitHub 更新地址，无法再通过应用内更新。确认新版正常启动后，可移除 `/Applications/NotchQuota.app`；账号与偏好使用原有 Bundle ID 保留。如曾开启登录时启动，请在新版中确认该设置仍有效。
+
+正式发布的 DMG 使用 Developer ID 签名并经过 Apple 公证。首次下载后系统仍可能显示正常的“从互联网下载”确认。
+
+需要先在相应软件登录过订阅账号，并有可用的网络连接。macOS 首次询问读取登录钥匙串时，请按需允许。**无需安装 Homebrew、Python、Node 或命令行工具**。Codex 已安装的后台命令行组件仅在它的登录过期时用于续期。
+
+右键菜单的“显示的应用”可勾选自己使用的应用；只勾选一个时固定显示，未勾选的应用不显示、不查询额度。关闭“自动轮换（每分钟）”可停留在当前应用，仍可点击图标手动切换。选择会保存在本机，重启和更新后保留。允许全部取消显示：此时刘海隐藏，菜单栏临时显示设置图标，用于重新开启账号。
+
+右键刘海区域可刷新、收起详情、下载更新、查看说明或退出。退出后不保留后台进程。右键勾选“开机自动启动”即可在下次登录 macOS 后自动运行；取消勾选即可关闭。如果显示“待系统允许”，点击菜单中的系统设置入口进行允许。状态直接读取系统登录项设置，应用不会在启动时强行重新开启。需要先将应用放入 `/Applications` 或当前用户的 `~/Applications`。
+
+## 使用设置
+
+### 临时隐藏
+
+右键 → 临时隐藏 → 15 分钟 / 1 小时 / 3 小时 / 5 小时。隐藏期间点击 Dock 中的 AetherNotchQuota 图标（或从“应用程序”重新打开）可立即恢复，也可点击菜单栏的眼睛图标选择“立即显示”；恢复后临时 Dock 图标自动移除；重新选择时长会从当前时间重新计时。截止时间跨重启保留，休眠后按实际时间恢复。账号选择保持不变，全部账号被关闭时不会强制显示。
+
+### 显示模式与账号详情
+
+右键 → 设置与更新 → 菜单栏模式 / 灵动岛模式 / 侧边栏模式。菜单栏左键打开当前账号详情，右键打开设置。面板直接展示当前账号各模型、周期的额度和重置时间，点击头像循环切换已勾选账号；只有一个账号时保持不变。每分钟自动轮换仍受原有开关控制，并同步更新面板。三种模式共用现有查询缓存，未返回的重置时间不会推算。
+
+首次在 macOS 27 使用且没有保存模式时默认菜单栏；手动模式选择跨重启保留。菜单栏项目位置与溢出由系统管理。不同系统版本的菜单栏溢出行为由 macOS 管理；选择菜单栏模式可避免应用在刘海附近显示悬浮窗口。
+
+### 侧边栏模式
+
+右键 → 设置与更新 → 侧边栏模式。宽 52 点的竖向悬浮条同时显示已勾选账号的头像、额度环和百分比；账号位置固定，不执行每分钟轮换。悬停约 120 毫秒后在内侧展开详情，点击图标固定，再次点击取消；移入详情可继续操作。拖动侧栏或账号图标，可跨屏自由摆放，靠近左/右边缘才吸附，位置和所在屏幕会保存。跨屏以松开鼠标所在屏幕为准；自由摆放会记住图标落点，展开面板避让屏幕边界后，收起仍回到该落点。鼠标或窗口焦点跨屏不会迁移侧栏，只有主动拖动才换屏；原屏幕断开时回退到可用屏幕，并保持在回退屏幕。鼠标离开 3 秒后收成可选外观（小幽灵、奶油小兔、蜂蜜小熊、云朵团子、橘子小猫、枫糖小狐、糯米熊猫、冰蓝企鹅），贴边时八种角色露出约半个身体；鼠标移入立即展开账号面板，固定详情时不自动收起，可在设置关闭自动收缩。账号过多超出屏幕时可在侧栏内滚动。
+
+侧边栏与其他模式共用缓存与刷新任务，悬停/固定不发起额度查询。关闭详情并收起后停止详情计时器；八种角色另保留低频的 10 分钟提醒定时器。卡通伙伴仅作展开入口，账号额度在展开后显示；查询失败或过期时，额度指示显示灰色。图标静置不播放循环动画。临时隐藏、账号选择、独立恢复入口继续有效。
+
+开发回归：`NOTCHQUOTA_SMOKE_DIR="$PWD/build" build/AetherNotchQuota.app/Contents/MacOS/NotchQuota --sidebar-test`。增加 `--benchmark` 可运行七账号静置和连续切换场景；使用脱敏内存数据，不读取凭据，不保存用户偏好。`scripts/performance-probe.swift` 支持第三个可选参数指定开发测试进程 PID；默认仍只采样安装版本。
+
+侧栏采用墨蓝石墨渐变、淡冰蓝高光与悬停底色，额度仍使用绿/黄/红。收起时徽标轻微回弹、展开按可见账号轻量依次显现；展开收起过渡由原生图层处理，隐藏或休眠停止，没有实时模糊或逐帧应用计时器。静置不播放循环动画；具体资源占用取决于账号数量与查询状态，不承诺零占用。
+
+收起外观可在「右键 → 设置与更新 → 收起外观」选择，默认小幽灵；即时生效并记住选择。八种外观共用拖动、贴边、移入展开和账号详情；八种角色提醒会在提醒前查询额度。八种角色自由悬浮时直立，贴边时向桌面方向倾斜探出；仅当前样式参与渲染。旧胶囊、圆球和仪表选择会迁移为小幽灵，已有角色选择保持不变。
+
+账号排序：右键 → 账号设置 → 调整账号顺序，拖动账号排序，或选中后使用上移/下移（⌥↑ / ⌥↓），再保存。侧边栏排列、点击切换与自动轮换共用此顺序；重启保留，新增账号追加到末尾，隐藏账号保留顺序记录。
+
+小幽灵额度提醒：八种角色收起且空闲时，每 10 分钟按账号顺序尝试提醒一个已勾选账号。提醒前先刷新，失败、旧数据或未知额度跳过并检查下一个，全部不可用则不弹出。思考云朵显示 5 秒后淡出，移入暂停、移开关闭；拖动、操作面板、临时隐藏、切换模式与休眠时不打扰，不补发错过的提醒。刷新复用正在进行的查询，不并发重复请求同一账号。
+
+## 刷新与轮换
+
+正常运行每 3 分钟刷新已勾选账号；启动、唤醒、手动切换和手动刷新也会尝试查询。常规查询同账号至少间隔 30 秒，休眠时暂停新请求。灵动岛与菜单栏的每分钟轮换只读取缓存，不增加查询；可以关闭轮换或手动调整顺序。侧边栏固定展示所选账号，不执行每分钟轮换。
+
+角色思考提醒单独每 10 分钟检查一次：提醒前主动查询，复用同账号正在进行的请求，只有本次查询成功且数据有效才展示。各账号依次尝试，避免同时发起一批提醒查询。
+
+## 数据来源与边界
+
+| 应用 | 登录来源 | 额度来源 |
+| --- | --- | --- |
+| Codex | 当前用户的 `~/.codex/auth.json`（支持 `CODEX_HOME`） | ChatGPT 订阅额度接口 |
+| Claude | Claude 桌面版保存的登录会话 | Claude 当前组织的 usage 接口 |
+| Antigravity | Antigravity 2.x 的 macOS 钥匙串 | 从已安装应用解析对应的 Google 额度服务 |
+
+紧凑视图显示已知窗口中**最少的剩余比例**；展开后按周期/模型分别显示。额度更新失败时保留并标记旧数据，不把失败当成 0% 或 100%。
+
+目前适配的是订阅额度，**不包含第三方 API 中转站余额**。仅 Claude Code 使用第三方 API Key 时，无法据此查询 Claude 官方订阅。登录完全失效、网页验证或服务接口变化时，可能需要在原应用重新登录/验证。Antigravity 旧 IDE 版与其他凭据存储格式尚未保证兼容。
+
+这些额度接口并非全部稳定公开 API，首次发布不代表所有账户类型、系统版本和网络环境都已经实机覆盖。兼容问题请使用 [问题模板](https://github.com/bcblr1993/AetherNotchQuota/issues/new/choose) 反馈；不要上传凭据、Cookie 或完整认证文件。
+
+## 开发
+
+需要 Xcode 15+ / Swift 5.9+，macOS。源码以 Swift Package 管理，可直接用 Xcode 打开 `Package.swift`。
+
+```sh
+git clone https://github.com/bcblr1993/AetherNotchQuota.git
+cd AetherNotchQuota
+swift test
+./scripts/build-app.sh
+open build/AetherNotchQuota.app
+```
+
+本地构建默认使用临时签名；这种构建不等同于已经公证的发行版。
+
+```sh
+# 仅使用演示数据，绝不读取真实凭据
+build/AetherNotchQuota.app/Contents/MacOS/NotchQuota --demo
+
+# 只输出脱敏的额度/连接状态，不输出认证信息
+build/AetherNotchQuota.app/Contents/MacOS/NotchQuota --diagnose
+
+# 原生窗口截屏及 15 秒收起与自动轮换验证
+NOTCHQUOTA_SMOKE_DIR=/path/to/output build/AetherNotchQuota.app/Contents/MacOS/NotchQuota --ui-smoke
+```
+
+项目结构、发布方式、隐私边界分别见 [架构](ARCHITECTURE.md)、[发布维护](RELEASING.md)、[隐私](../PRIVACY.md)。
+
+## 更新和反馈
+
+0.1.18 及以上版本支持当前更新源：默认每天检查一次，新版本在图标旁显示蓝色下载标记，右键菜单显示“更新至版本号”。点击后使用原生更新窗口下载、校验、安装并重新打开，无需拖拽替换。可以在菜单关闭自动检查，并随时点击“检查更新”。仅检查不会自动下载或安装；断网时可稍后重试。NotchQuota 0.1.17 及更早版本需手动安装新版。启动默认选择 Codex；未安装则依次选择 Claude、Antigravity。
+
+遵循语义化版本，所有用户可见改动记录在 [CHANGELOG](../CHANGELOG.md)。修复通过 PR、自动测试和构建检查后发布。欢迎提交 Issue / PR。
+
+## 许可证
+
+项目原创代码采用 [MIT](../LICENSE) 许可证。应用图标及相关商标属于各自权利人，详见 [第三方声明](../THIRD_PARTY_NOTICES.md)。
+
+开发者可使用独立的[性能采样工具](PERFORMANCE.md)做本机观察；应用本身不上传性能遥测。
