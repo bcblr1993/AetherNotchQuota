@@ -39,6 +39,21 @@ final class SidebarTests: XCTestCase {
             XCTAssertNotNil(style.menuIcon)
         }
     }
+    func testReturnGestureIsBoundedAndCancelsEveryCharacterLayer() {
+        let emblem = SidebarEmblem()
+        for style in SidebarAppearance.selectable {
+            emblem.configure(style)
+            emblem.playReturn()
+            let character = emblem.sublayers?.first
+            XCTAssertNotNil(character?.animation(forKey: "returnGesture"))
+            XCTAssertNotNil(character?.animation(forKey: "returnSquash"))
+            XCTAssertLessThanOrEqual(character?.animation(forKey: "returnGesture")?.duration ?? 1, 0.5)
+            XCTAssertEqual(character?.animation(forKey: "returnGesture")?.repeatCount, 0)
+            emblem.stopMotion()
+            XCTAssertFalse(emblem.hasMotion)
+            XCTAssertTrue(character?.animationKeys()?.isEmpty != false)
+        }
+    }
     func testAppearanceRestoresAndUnknownPreferenceFallsBack() {
         XCTAssertEqual(SidebarAppearance.restored(nil), .ghost)
         XCTAssertEqual(SidebarAppearance.restored("unknown-future-style"), .ghost)

@@ -3,10 +3,10 @@ import QuartzCore
 
 /// Stable persisted values; unknown values from future versions fall back safely.
 enum SidebarAppearance: String, CaseIterable {
-    case capsule, orb, gauge, ghost, bunny, bear, cloud, cat, fox, panda, penguin
+    case capsule, orb, gauge, ghost, bunny, bear, cloud, cat, fox, panda, penguin, turtle
     static let preferenceKey = "sidebarAppearance"
     /// Legacy styles remain decodable, but are no longer offered in the menu.
-    static let selectable: [Self] = [.ghost, .bunny, .bear, .cloud, .cat, .fox, .panda, .penguin]
+    static let selectable: [Self] = [.panda, .bunny, .fox, .turtle, .ghost, .cloud, .bear, .cat, .penguin]
     static func restored(_ value: String?) -> Self {
         guard let style = value.flatMap(Self.init(rawValue:)), selectable.contains(style) else { return .ghost }
         return style
@@ -26,6 +26,7 @@ enum SidebarAppearance: String, CaseIterable {
         case .fox: return "枫糖小狐"
         case .panda: return "糯米熊猫"
         case .penguin: return "冰蓝企鹅"
+        case .turtle: return "抹茶小龟"
         }
     }
 }
@@ -80,51 +81,7 @@ final class SidebarEmblem: CALayer {
             spark.addLine(to: CGPoint(x: 12, y: 20)); spark.addLine(to: CGPoint(x: 16, y: 22)); spark.closeSubpath()
             let mark = CAShapeLayer(); mark.path = spark; mark.fillColor = NSColor(white: 0.96, alpha: 1).cgColor
             addSublayer(mark); addSublayer(valueLabel)
-        case .ghost:
-            let p = CGMutablePath(); p.move(to: CGPoint(x: 4.2, y: 13))
-            p.addCurve(to: CGPoint(x: 8.4, y: 29), control1: CGPoint(x: 2.3, y: 19), control2: CGPoint(x: 3.5, y: 27))
-            p.addCurve(to: CGPoint(x: 25.5, y: 31), control1: CGPoint(x: 12.2, y: 35), control2: CGPoint(x: 21.4, y: 35))
-            p.addCurve(to: CGPoint(x: 32.2, y: 13), control1: CGPoint(x: 31.1, y: 28), control2: CGPoint(x: 33.3, y: 20))
-            p.addCurve(to: CGPoint(x: 31, y: 5.8), control1: CGPoint(x: 31.8, y: 9), control2: CGPoint(x: 33.4, y: 7.4))
-            p.addCurve(to: CGPoint(x: 23.3, y: 5), control1: CGPoint(x: 29.2, y: 2.1), control2: CGPoint(x: 25.3, y: 2.5))
-            p.addCurve(to: CGPoint(x: 17.2, y: 5.6), control1: CGPoint(x: 21.8, y: 2.5), control2: CGPoint(x: 19.5, y: 2.8))
-            p.addCurve(to: CGPoint(x: 10, y: 5), control1: CGPoint(x: 15.2, y: 2.7), control2: CGPoint(x: 12, y: 2.8))
-            p.addCurve(to: CGPoint(x: 4.2, y: 13), control1: CGPoint(x: 5.4, y: 2.6), control2: CGPoint(x: 3.9, y: 7.5))
-            p.closeSubpath()
-            body(p, colors: [
-                NSColor(srgbRed: 1, green: 0.988, blue: 0.965, alpha: 1),
-                NSColor(srgbRed: 0.925, green: 0.914, blue: 0.941, alpha: 1),
-                NSColor(srgbRed: 0.843, green: 0.839, blue: 0.882, alpha: 1)
-            ])
-            for cheekX: CGFloat in [8.2, 25] {
-                let cheek = CAShapeLayer()
-                cheek.path = CGPath(ellipseIn: CGRect(x: cheekX, y: 15.9, width: 4.6, height: 2), transform: nil)
-                cheek.fillColor = NSColor(srgbRed: 0.91, green: 0.66, blue: 0.73, alpha: 0.52).cgColor
-                addSublayer(cheek)
-            }
-            let smilePath = CGMutablePath(); smilePath.move(to: CGPoint(x: 16.1, y: 17.2))
-            smilePath.addQuadCurve(to: CGPoint(x: 19.6, y: 17.1), control: CGPoint(x: 17.8, y: 14.8))
-            let smile = CAShapeLayer(); smile.path = smilePath; smile.fillColor = nil
-            smile.strokeColor = NSColor(srgbRed: 0.36, green: 0.31, blue: 0.38, alpha: 1).cgColor
-            smile.lineWidth = 0.8; smile.lineCap = .round; addSublayer(smile)
-            eyes.frame = bounds
-            let eyeColor = NSColor(srgbRed: 0.16, green: 0.17, blue: 0.21, alpha: 1).cgColor
-            for frame in [CGRect(x: 10.5, y: 19.8, width: 3.6, height: 5.5),
-                          CGRect(x: 21, y: 20.6, width: 3.6, height: 5.5)] {
-                let eye = CAShapeLayer(); eye.path = CGPath(ellipseIn: frame, transform: nil)
-                eye.fillColor = eyeColor; eyes.addSublayer(eye)
-            }
-            addSublayer(eyes)
-            // Lean the body and face out into the desktop from the screen edge.
-            let leaningBody = CALayer()
-            leaningBody.bounds = bounds
-            leaningBody.anchorPoint = CGPoint(x: 27.0 / 36, y: 13.0 / 36)
-            leaningBody.position = CGPoint(x: 27, y: 13)
-            let bodyLayers = sublayers ?? []
-            for child in bodyLayers { child.removeFromSuperlayer(); leaningBody.addSublayer(child) }
-            self.leaningBody = leaningBody
-            addSublayer(leaningBody)
-        case .bunny, .bear, .cloud, .cat, .fox, .panda, .penguin:
+        case .ghost, .bunny, .bear, .cloud, .cat, .fox, .panda, .penguin, .turtle:
             let character = SidebarMascotArtwork.make(style: style, eyes: eyes)
             character.bounds = bounds
             character.anchorPoint = CGPoint(x: 27.0 / 36, y: 13.0 / 36)
@@ -153,19 +110,33 @@ final class SidebarEmblem: CALayer {
     }
     func stopMotion() {
         returnCleanup?.cancel(); returnCleanup = nil
-        removeAllAnimations(); eyes.removeAllAnimations()
+        removeAllAnimations(); eyes.removeAllAnimations(); leaningBody?.removeAllAnimations()
     }
-    var hasMotion: Bool { animationKeys()?.isEmpty == false || eyes.animationKeys()?.isEmpty == false }
+    var hasMotion: Bool { animationKeys()?.isEmpty == false || eyes.animationKeys()?.isEmpty == false || leaningBody?.animationKeys()?.isEmpty == false }
     var hasReturnMotion: Bool { animation(forKey: "returnHop") != nil && eyes.animation(forKey: "returnBlink") != nil }
     func playReturn() {
         guard appearance.isCharacter else { return }
         returnCleanup?.cancel()
+        // Anticipation, lift, soft landing, then stillness. Each pet has its own gesture.
         let hop = CAKeyframeAnimation(keyPath: "transform.translation.y")
-        hop.values = [0, -2.2, 0.8, 0]
-        hop.keyTimes = [0, 0.28, 0.68, 1]
-        hop.beginTime = convertTime(CACurrentMediaTime(), from: nil)
-        hop.duration = 0.38; hop.calculationMode = .cubic
+        let floating = appearance == .ghost || appearance == .cloud
+        let hopping = appearance == .bunny
+        hop.values = floating ? [0, -0.4, 2.0, 0.7, 0] : [0, -0.7, hopping ? 3.0 : 1.2, -0.4, 0]
+        if appearance == .turtle { hop.values = [0, -0.1, -0.4, -0.15, 0] }
+        hop.keyTimes = [0, 0.18, 0.46, 0.74, 1]
+        hop.duration = 0.44; hop.calculationMode = .cubic
         add(hop, forKey: "returnHop")
+        if let character = leaningBody {
+            let gesture = CAKeyframeAnimation(keyPath: "transform.rotation.z")
+            let angle: Double = appearance == .penguin ? 0.13 : ([SidebarAppearance.cat, .fox].contains(appearance) ? 0.09 : 0.035)
+            gesture.values = [0, -angle * 0.4, angle, -angle * 0.25, 0]
+            gesture.keyTimes = [0, 0.18, 0.46, 0.74, 1]; gesture.duration = 0.44
+            gesture.isAdditive = true; gesture.calculationMode = .cubic
+            character.add(gesture, forKey: "returnGesture")
+            let squash = CAKeyframeAnimation(keyPath: "transform.scale.y")
+            squash.values = appearance == .turtle ? [1, 1, 0.97, 0.99, 1] : [1, 0.94, 1.035, 0.97, 1]; squash.keyTimes = gesture.keyTimes
+            squash.duration = 0.44; character.add(squash, forKey: "returnSquash")
+        }
         let blink = CAKeyframeAnimation(keyPath: "transform.scale.y")
         blink.values = [1, 0.14, 1]
         blink.keyTimes = [0, 0.42, 1]
@@ -177,6 +148,7 @@ final class SidebarEmblem: CALayer {
         let cleanup = DispatchWorkItem { [weak self] in
             self?.removeAnimation(forKey: "returnHop")
             self?.eyes.removeAnimation(forKey: "returnBlink")
+            self?.leaningBody?.removeAllAnimations()
             self?.returnCleanup = nil
         }
         returnCleanup = cleanup
@@ -197,7 +169,7 @@ final class SidebarEmblem: CALayer {
     }
     func face(right: Bool, docked: Bool, peeking: Bool) {
         // Only edge-docked characters lean; a free-floating character stands upright.
-        leaningBody?.transform = docked ? CATransform3DMakeRotation(14 * .pi / 180, 0, 0, 1) : CATransform3DIdentity
+        leaningBody?.transform = docked ? CATransform3DMakeRotation(6 * .pi / 180, 0, 0, 1) : CATransform3DIdentity
         // Mirror only the character, never quota text.
         sublayerTransform = CATransform3DMakeScale((appearance.isCharacter && !right ? -1 : 1) * appearance.scale, appearance.scale, 1)
     }
