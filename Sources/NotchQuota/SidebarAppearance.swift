@@ -15,18 +15,18 @@ enum SidebarAppearance: String, CaseIterable {
     var scale: CGFloat { isCharacter ? 2.25 : 1.5 }
     var title: String {
         switch self {
-        case .capsule: return "原生胶囊"
-        case .orb: return "磨砂圆球"
-        case .gauge: return "迷你仪表"
-        case .ghost: return "小幽灵"
-        case .bunny: return "奶油小兔"
-        case .bear: return "蜂蜜小熊"
-        case .cloud: return "云朵团子"
-        case .cat: return "橘子小猫"
-        case .fox: return "枫糖小狐"
-        case .panda: return "糯米熊猫"
-        case .penguin: return "冰蓝企鹅"
-        case .turtle: return "抹茶小龟"
+        case .capsule: return L10n.text("原生胶囊")
+        case .orb: return L10n.text("磨砂圆球")
+        case .gauge: return L10n.text("迷你仪表")
+        case .ghost: return L10n.text("小幽灵")
+        case .bunny: return L10n.text("奶油小兔")
+        case .bear: return L10n.text("蜂蜜小熊")
+        case .cloud: return L10n.text("云朵团子")
+        case .cat: return L10n.text("橘子小猫")
+        case .fox: return L10n.text("枫糖小狐")
+        case .panda: return L10n.text("糯米熊猫")
+        case .penguin: return L10n.text("冰蓝企鹅")
+        case .turtle: return L10n.text("抹茶小龟")
         }
     }
 }

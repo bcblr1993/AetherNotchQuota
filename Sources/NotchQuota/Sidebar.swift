@@ -121,7 +121,7 @@ final class SidebarCell: NSView {
         }
         CATransaction.commit()
         let label = account.title + (account.subtitle.isEmpty ? "" : " · " + account.subtitle)
-        toolTip = nil; setAccessibilityLabel(label + " · " + (remaining.map { "\(Int($0))%" } ?? "未知额度"))
+        toolTip = nil; setAccessibilityLabel(label + " · " + (remaining.map { "\(Int($0))%" } ?? L10n.text("未知额度")))
     }
     func highlight(_ enabled: Bool) {
         guard highlighted != enabled else { return }; highlighted = enabled
@@ -271,7 +271,7 @@ final class SidebarSurface: NSView {
             p.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .ignoresCycle]; p.appearance = NSAppearance(named: .darkAqua)
             return p
         }
-        panel = window("AetherNotchQuota 侧边栏"); detail = window("AetherNotchQuota 账号详情")
+        panel = window(L10n.text("AetherNotchQuota 侧边栏")); detail = window(L10n.text("AetherNotchQuota 账号详情"))
         if persist {
             let d = UserDefaults.standard
             right = d.object(forKey: "sidebarRight") as? Bool ?? true
@@ -378,7 +378,7 @@ final class SidebarSurface: NSView {
         let state = account?.state
         let remaining = state?.stale == true || state?.error != nil ? nil : state?.snapshot?.remaining
         emblem.update(remaining: remaining, scale: panel.backingScaleFactor)
-        surface.setAccessibilityLabel((account?.title ?? "额度") + " · " + (remaining.map { "剩余\(Int($0.rounded()))%" } ?? "额度暂不可用") + " · 移入展开")
+        surface.setAccessibilityLabel((account?.title ?? L10n.text("额度")) + " · " + (remaining.map { L10n.format("剩余{0}%", String(describing: Int($0.rounded()))) } ?? L10n.text("额度暂不可用")) + L10n.text(" · 移入展开"))
     }
     private func layoutEmblem() {
         let tucked = collapsed && docked && appearance.isCharacter

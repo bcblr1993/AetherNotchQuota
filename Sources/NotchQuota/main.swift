@@ -65,7 +65,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     var cameraWidth: CGFloat = 0
     var demo = CommandLine.arguments.contains("--demo")
     let animationTestMode = CommandLine.arguments.contains("--animation-test")
-    var testMode: Bool { animationTestMode || CommandLine.arguments.contains("--ui-smoke") || CommandLine.arguments.contains("--sidebar-test") }
+    var testMode: Bool { animationTestMode || CommandLine.arguments.contains("--localization-smoke") || CommandLine.arguments.contains("--ui-smoke") || CommandLine.arguments.contains("--sidebar-test") }
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory)
         if !demo && !testMode {
@@ -125,9 +125,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         powerObservers.append(NSWorkspace.shared.notificationCenter.addObserver(forName: NSWorkspace.accessibilityDisplayOptionsDidChangeNotification, object: nil, queue: .main) { [weak self] _ in
             Task { @MainActor [weak self] in self?.updateView() }
         })
+        powerObservers.append(NotificationCenter.default.addObserver(forName: NSLocale.currentLocaleDidChangeNotification, object: nil, queue: .main) { [weak self] _ in
+            Task { @MainActor [weak self] in if AppLanguage.selection == .system { self?.refreshLanguagePresentation() } }
+        })
         refreshAll()
         if !demo && !testMode { scanInstances() }
-        if CommandLine.arguments.contains("--sidebar-test") { runSidebarTest() }
+        if CommandLine.arguments.contains("--localization-smoke") { runLocalizationSmoke() }
+        else if CommandLine.arguments.contains("--sidebar-test") { runSidebarTest() }
         else if animationTestMode { runAnimationTest() }
         else if testMode { runUISmoke() }
     }
@@ -410,11 +414,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func makeMenu() -> NSMenu {
         let menu = NSMenu(); menu.autoenablesItems = false; menu.minimumWidth = 210
         appendTemporaryVisibilityMenu(to: menu)
-        let refresh = NSMenuItem(title: "刷新额度", action: #selector(manualRefresh), keyEquivalent: "r"); refresh.target = self; menu.addItem(refresh)
-        let hide = NSMenuItem(title: "收起详情", action: #selector(manualRest), keyEquivalent: "h"); hide.target = self; hide.isEnabled = !temporarilyHidden
+        let refresh = NSMenuItem(title: L10n.text("刷新额度"), action: #selector(manualRefresh), keyEquivalent: "r"); refresh.target = self; menu.addItem(refresh)
+        let hide = NSMenuItem(title: L10n.text("收起详情"), action: #selector(manualRest), keyEquivalent: "h"); hide.target = self; hide.isEnabled = !temporarilyHidden
         if quotaView?.expanded == true && !temporarilyHidden { menu.addItem(hide) }
         menu.addItem(.separator())
-        let rotation = NSMenuItem(title: "自动轮换（每分钟）", action: #selector(toggleAutomaticRotation), keyEquivalent: "")
+        let rotation = NSMenuItem(title: L10n.text("自动轮换（每分钟）"), action: #selector(toggleAutomaticRotation), keyEquivalent: "")
         rotation.target = self; rotation.state = automaticRotation ? .on : .off
         if displayMode != .sidebar { menu.addItem(rotation) }
         let choices = NSMenu()
@@ -424,16 +428,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             item.image = accountAvatars[candidate.rawValue] ?? candidate.icon
             item.target = self; item.representedObject = candidate.rawValue
             item.state = visibleTargets.contains(.standard(candidate)) ? .on : .off
-            if blockedAccounts.contains(candidate.rawValue) { item.title += " · 账号已变化，重新勾选确认" }
+            if blockedAccounts.contains(candidate.rawValue) { item.title += L10n.text(" · 账号已变化，重新勾选确认") }
             choices.addItem(item)
         }
-        let selection = NSMenuItem(title: "显示的应用", action: nil, keyEquivalent: "")
+        let selection = NSMenuItem(title: L10n.text("显示的应用"), action: nil, keyEquivalent: "")
         selection.submenu = choices; menu.addItem(selection)
         appendAccountMenu(to: menu, inlineAccounts: choices)
         let settingsMenu = NSMenu(); settingsMenu.autoenablesItems = false; settingsMenu.minimumWidth = 240
         appendDisplayModeItems(to: settingsMenu)
         if displayMode == .sidebar {
-            let collapse = NSMenuItem(title: "闲置时自动收起", action: #selector(toggleSidebarCollapse), keyEquivalent: "")
+            let collapse = NSMenuItem(title: L10n.text("闲置时自动收起"), action: #selector(toggleSidebarCollapse), keyEquivalent: "")
             collapse.target = self; collapse.state = sidebar?.autoCollapse == true ? .on : .off
             settingsMenu.addItem(collapse)
             let appearanceMenu = NSMenu(); appearanceMenu.minimumWidth = 160
@@ -444,7 +448,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 item.state = sidebar?.appearance == style ? .on : .off
                 appearanceMenu.addItem(item)
             }
-            let appearanceItem = NSMenuItem(title: "收起外观", action: nil, keyEquivalent: "")
+            let appearanceItem = NSMenuItem(title: L10n.text("收起外观"), action: nil, keyEquivalent: "")
             appearanceItem.submenu = appearanceMenu; settingsMenu.addItem(appearanceItem)
             settingsMenu.addItem(.separator())
         }
@@ -453,23 +457,24 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         login.target = self; login.state = loginState.checkmark
         settingsMenu.addItem(login)
         if loginState == .requiresApproval {
-            let settings = NSMenuItem(title: "在系统设置中允许自动启动…", action: #selector(openLoginSettings), keyEquivalent: "")
+            let settings = NSMenuItem(title: L10n.text("在系统设置中允许自动启动…"), action: #selector(openLoginSettings), keyEquivalent: "")
             settings.target = self; settingsMenu.addItem(settings)
         }
         settingsMenu.addItem(.separator())
-        let currentVersion = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "未知"
-        let versionInfo = NSMenuItem(title: "当前版本：\(currentVersion)", action: nil, keyEquivalent: "")
+        let currentVersion = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? L10n.text("未知")
+        let versionInfo = NSMenuItem(title: L10n.format("当前版本：{0}", String(describing: currentVersion)), action: nil, keyEquivalent: "")
         versionInfo.isEnabled = false; settingsMenu.addItem(versionInfo)
         let updates = NSMenuItem(title: appUpdates.menuTitle, action: #selector(openUpdates), keyEquivalent: ""); updates.target = self; updates.isEnabled = !demo && !testMode && appUpdates.canCheck; settingsMenu.addItem(updates)
-        let automatic = NSMenuItem(title: "自动检查新版本（每天）", action: #selector(toggleUpdateChecks), keyEquivalent: "")
+        let automatic = NSMenuItem(title: L10n.text("自动检查新版本（每天）"), action: #selector(toggleUpdateChecks), keyEquivalent: "")
         automatic.target = self; automatic.state = appUpdates.automaticallyChecks ? .on : .off
         automatic.isEnabled = !demo && !testMode
         settingsMenu.addItem(automatic)
-        let help = NSMenuItem(title: "使用说明 / 反馈问题…", action: #selector(openHelp), keyEquivalent: ""); help.target = self; settingsMenu.addItem(help)
-        let settingsRoot = NSMenuItem(title: "设置与更新", action: nil, keyEquivalent: "")
+        let help = NSMenuItem(title: L10n.text("使用说明 / 反馈问题…"), action: #selector(openHelp), keyEquivalent: ""); help.target = self; settingsMenu.addItem(help)
+        appendLanguageMenu(to: settingsMenu)
+        let settingsRoot = NSMenuItem(title: L10n.text("设置与更新"), action: nil, keyEquivalent: "")
         settingsRoot.submenu = settingsMenu; menu.addItem(settingsRoot)
         menu.addItem(.separator())
-        let quit = NSMenuItem(title: "退出 AetherNotchQuota", action: #selector(quit), keyEquivalent: "q"); quit.target = self; menu.addItem(quit)
+        let quit = NSMenuItem(title: L10n.text("退出 AetherNotchQuota"), action: #selector(quit), keyEquivalent: "q"); quit.target = self; menu.addItem(quit)
         return menu
     }
     @objc func changeSidebarAppearance(_ sender: NSMenuItem) {
@@ -507,8 +512,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             try LaunchAtLogin.setEnabled(LaunchAtLogin.state.shouldEnableOnToggle)
             if LaunchAtLogin.state == .requiresApproval { LaunchAtLogin.openSettings() }
         } catch {
-            let alert = NSAlert(); alert.messageText = "无法更改开机自动启动"
-            alert.informativeText = error.localizedDescription; alert.addButton(withTitle: "好")
+            let alert = NSAlert(); alert.messageText = L10n.text("无法更改开机自动启动")
+            alert.informativeText = L10n.message(error.localizedDescription); alert.addButton(withTitle: L10n.text("好"))
             alert.runModal()
         }
     }
@@ -612,9 +617,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             check(NSApp.windows.filter { $0.isVisible }.count == 1, "only one window and no outline")
             smokeInstalled = Provider.allCases; discoverInstalled(); rest()
             let mainMenu = makeMenu()
-            let durationMenu = mainMenu.items.first { $0.title == "临时隐藏" }?.submenu
+            let durationMenu = mainMenu.items.first { $0.title == L10n.text("临时隐藏") }?.submenu
             check(mainMenu.items.count <= 10 && mainMenu.size.height < (screen?.visibleFrame.height ?? 600) - topHeight - 24, "main menu fits below notch without scrolling")
-            check((durationMenu?.size.width ?? 0) >= 150 && durationMenu?.items.map(\.title) == ["15 分钟", "1 小时", "3 小时", "5 小时"], "duration submenu reserves full label width")
+            check((durationMenu?.size.width ?? 0) >= 150 && durationMenu?.items.map(\.title) == [L10n.text("15 分钟"), L10n.text("1 小时"), L10n.text("3 小时"), L10n.text("5 小时")], "duration submenu reserves full label width")
             print("Menu size: \(mainMenu.size), duration submenu: \(durationMenu?.size ?? .zero)")
             let savedTargets = visibleTargets, savedTarget = target
             let start = Date()

@@ -206,3 +206,11 @@ NOTCHQUOTA_SMOKE_DIR=/path/to/output build/AetherNotchQuota.app/Contents/MacOS/N
 项目原创代码采用 [MIT](../LICENSE) 许可证。应用图标及相关商标属于各自权利人，详见 [第三方声明](../THIRD_PARTY_NOTICES.md)。
 
 开发者可使用独立的[性能采样工具](PERFORMANCE.md)做本机观察；应用本身不上传性能遥测。
+
+## 界面语言
+
+支持简体中文、English 和日本語。右键 → 设置与更新 → 语言，选择「跟随系统」或手动指定语言。未支持的系统语言回退到英文。
+
+菜单、额度详情、账号管理、宠物提醒、错误提示及辅助功能说明随选择立即更新；所选语言会保存，不改变账号、别名、顺序、额度缓存或服务环境。系统文件选择器和 Sparkle 自带弹窗在下次启动后使用所选语言。
+
+开发验证可在构建后执行 `scripts/test-localization.sh`，自动检查三种语言的手动切换、菜单、额度与错误界面、账号排序及恢复提醒；截图保存在 `build/localization-review`。测试使用独立语言偏好，不修改用户设置。

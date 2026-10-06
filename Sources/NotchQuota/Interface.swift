@@ -83,7 +83,7 @@ final class QuotaView: NSView {
             button.target = self; button.focusRingType = .exterior
             addSubview(button)
         }
-        updateButton.image = NSImage(systemSymbolName: "arrow.down.circle.fill", accessibilityDescription: "可更新")
+        updateButton.image = NSImage(systemSymbolName: "arrow.down.circle.fill", accessibilityDescription: L10n.text("可更新"))
         updateButton.contentTintColor = .systemBlue
         updateButton.imageScaling = .scaleProportionallyDown
         updateButton.action = #selector(showUpdate)
@@ -97,14 +97,14 @@ final class QuotaView: NSView {
     required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
     func update() {
         updateButton.isHidden = updateVersion == nil
-        updateButton.toolTip = updateVersion.map { "新版本 \($0) 可更新，点击下载安装" }
-        updateButton.setAccessibilityLabel(updateButton.toolTip ?? "检查更新")
+        updateButton.toolTip = updateVersion.map { L10n.format("新版本 {0} 可更新，点击下载安装", String(describing: $0)) }
+        updateButton.setAccessibilityLabel(updateButton.toolTip ?? L10n.text("检查更新"))
         iconButton.image = accountImage ?? provider.icon
-        iconButton.toolTip = nextProviderTitle.map { "切换至 \($0)" } ?? (accountTitle ?? provider.title)
-        iconButton.setAccessibilityLabel(nextProviderTitle.map { "当前 \(accountTitle ?? provider.title)，切换至 \($0)" } ?? "当前 \(accountTitle ?? provider.title)")
+        iconButton.toolTip = nextProviderTitle.map { L10n.format("切换至 {0}", String(describing: $0)) } ?? (accountTitle ?? provider.title)
+        iconButton.setAccessibilityLabel(nextProviderTitle.map { L10n.format("当前 {0}，切换至 {1}", String(describing: accountTitle ?? provider.title), String(describing: $0)) } ?? L10n.format("当前 {0}", String(describing: accountTitle ?? provider.title)))
         quotaButton.title = ""
-        quotaButton.setAccessibilityLabel("\(provider.title) 剩余额度 \(percentage)，\(expanded ? "收起详情" : "显示详情")")
-        quotaButton.toolTip = state.error ?? (state.stale ? "上次读取的额度，等待更新" : (expanded ? "点击收起详情" : "剩余额度 · 点击展开"))
+        quotaButton.setAccessibilityLabel(L10n.format("{0} 剩余额度 {1}，{2}", String(describing: provider.title), String(describing: percentage), String(describing: expanded ? L10n.text("收起详情") : L10n.text("显示详情"))))
+        quotaButton.toolTip = state.error.map { L10n.message($0) } ?? (state.stale ? L10n.text("上次读取的额度，等待更新") : (expanded ? L10n.text("点击收起详情") : L10n.text("剩余额度 · 点击展开")))
         layoutButtons()
         needsDisplay = true
     }
@@ -157,17 +157,17 @@ final class QuotaView: NSView {
         let muted = NSColor(white: 0.61, alpha: 1)
         let rows = state.snapshot?.windows ?? []
         var y = topHeight + 12
-        text(accountTitle ?? (state.stale ? "上次剩余额度" : "剩余额度"), x: 17, y: y + 7, size: 11, color: muted, width: bounds.width - 125)
+        text(accountTitle ?? (state.stale ? L10n.text("上次剩余额度") : L10n.text("剩余额度")), x: 17, y: y + 7, size: 11, color: muted, width: bounds.width - 125)
         text(percentage, x: bounds.width - 96, y: y, size: 24, color: tint, weight: .medium, width: 79, align: .right)
         y += 39
         if rows.isEmpty {
-            let message = state.error ?? "正在读取本机账号额度…"
+            let message = state.error.map { L10n.message($0) } ?? L10n.text("正在读取本机账号额度…")
             let attrs: [NSAttributedString.Key: Any] = [.font: NSFont.systemFont(ofSize: 11), .foregroundColor: muted]
             (message as NSString).draw(in: NSRect(x: 17, y: y, width: bounds.width - 34, height: 47), withAttributes: attrs)
             return
         }
         for row in rows.prefix(6) {
-            text(row.label, x: 17, y: y, size: 10.5, color: NSColor(white: 0.84, alpha: 1), width: bounds.width - 77)
+            text(L10n.quotaLabel(row.label), x: 17, y: y, size: 10.5, color: NSColor(white: 0.84, alpha: 1), width: bounds.width - 77)
             let value = row.remaining.map { "\(Int($0.rounded()))%" } ?? "—"
             text(value, x: bounds.width - 61, y: y, size: 10.5, color: muted, width: 44, align: .right)
             y += 19
@@ -180,11 +180,11 @@ final class QuotaView: NSView {
             y += 13
         }
         let footer: String
-        if let error = state.error { footer = "更新失败 · " + error }
+        if let error = state.error { footer = L10n.text("更新失败 · ") + L10n.message(error) }
         else if let reset = rows.min(by: { ($0.remaining ?? 101) < ($1.remaining ?? 101) })?.reset {
             let seconds = max(0, reset.timeIntervalSinceNow)
-            footer = seconds > 86400 ? "\(Int(ceil(seconds / 86400))) 天内重置" : seconds > 3600 ? "\(Int(seconds / 3600)) 小时 \(Int(seconds.truncatingRemainder(dividingBy: 3600) / 60)) 分后重置" : "\(Int(ceil(seconds / 60))) 分钟后重置"
-        } else { footer = "刚刚更新" }
+            footer = seconds > 86400 ? L10n.format("{0} 天内重置", String(describing: Int(ceil(seconds / 86400)))) : seconds > 3600 ? L10n.format("{0} 小时 {1} 分后重置", String(describing: Int(seconds / 3600)), String(describing: Int(seconds.truncatingRemainder(dividingBy: 3600) / 60))) : L10n.format("{0} 分钟后重置", String(describing: Int(ceil(seconds / 60))))
+        } else { footer = L10n.text("刚刚更新") }
         text(footer, x: 17, y: y + 3, size: 10, color: muted, width: bounds.width - 34)
     }
 }

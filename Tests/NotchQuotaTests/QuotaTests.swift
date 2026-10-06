@@ -89,7 +89,7 @@ final class LoginItemTests: XCTestCase {
         XCTAssertEqual(LoginItemState.enabled.checkmark, .on)
         XCTAssertEqual(LoginItemState.requiresApproval.checkmark, .mixed)
         XCTAssertEqual(LoginItemState.disabled.checkmark, .off)
-        XCTAssertTrue(LoginItemState.requiresApproval.title.contains("待系统允许"))
+        XCTAssertEqual(LoginItemState.requiresApproval.title, L10n.text("开机自动启动（待系统允许）"))
     }
     func testToggleAllowsDisablingPendingRegistration() {
         XCTAssertFalse(LoginItemState.enabled.shouldEnableOnToggle)

@@ -27,8 +27,8 @@ enum AccountOrder {
     let table = NSTableView()
     var accounts: [QuotaTarget]
     let label: (QuotaTarget) -> String
-    let up = NSButton(title: "上移", target: nil, action: nil)
-    let down = NSButton(title: "下移", target: nil, action: nil)
+    let up = NSButton(title: L10n.text("上移"), target: nil, action: nil)
+    let down = NSButton(title: L10n.text("下移"), target: nil, action: nil)
     private let dragType = NSPasteboard.PasteboardType("io.github.notchquota.account-order")
     private var dialog: NSWindow?
 
@@ -37,11 +37,11 @@ enum AccountOrder {
         let height = CGFloat(min(max(accounts.count, 2), 8)) * 54 + 164
         view = NSView(frame: NSRect(x: 0, y: 0, width: 460, height: height))
         super.init()
-        let title = NSTextField(labelWithString: "账号显示顺序")
+        let title = NSTextField(labelWithString: L10n.text("账号显示顺序"))
         title.font = .systemFont(ofSize: 17, weight: .semibold)
-        let help = NSTextField(labelWithString: "拖动账号排序，或选中后使用上移、下移。")
+        let help = NSTextField(labelWithString: L10n.text("拖动账号排序，或选中后使用上移、下移。"))
         help.font = .systemFont(ofSize: 12); help.textColor = .secondaryLabelColor
-        let count = NSTextField(labelWithString: "\(accounts.count) 个账号")
+        let count = NSTextField(labelWithString: L10n.format("{0} 个账号", String(describing: accounts.count)))
         count.font = .systemFont(ofSize: 11); count.textColor = .secondaryLabelColor
         let scroll = NSScrollView()
         scroll.hasVerticalScroller = true; scroll.autohidesScrollers = true
@@ -54,7 +54,7 @@ enum AccountOrder {
         table.style = .fullWidth; table.usesAlternatingRowBackgroundColors = true
         table.columnAutoresizingStyle = .lastColumnOnlyAutoresizingStyle
         table.dataSource = self; table.delegate = self; table.allowsMultipleSelection = false
-        table.setAccessibilityLabel("账号顺序，可拖动调整")
+        table.setAccessibilityLabel(L10n.text("账号顺序，可拖动调整"))
         table.registerForDraggedTypes([dragType]); table.setDraggingSourceOperationMask(.move, forLocal: true)
         scroll.documentView = table
         for (index, button) in [up, down].enumerated() {
@@ -62,13 +62,13 @@ enum AccountOrder {
             button.action = index == 0 ? #selector(moveUp) : #selector(moveDown)
             button.keyEquivalent = index == 0 ? "\u{F700}" : "\u{F701}"
             button.keyEquivalentModifierMask = [.option]
-            button.toolTip = index == 0 ? "上移（⌥↑）" : "下移（⌥↓）"
+            button.toolTip = index == 0 ? L10n.text("上移（⌥↑）") : L10n.text("下移（⌥↓）")
         }
-        let cancel = NSButton(title: "取消", target: self, action: #selector(cancelEditing))
+        let cancel = NSButton(title: L10n.text("取消"), target: self, action: #selector(cancelEditing))
         cancel.bezelStyle = .rounded; cancel.keyEquivalent = "\u{1b}"
-        let save = NSButton(title: "保存", target: self, action: #selector(saveEditing))
+        let save = NSButton(title: L10n.text("保存"), target: self, action: #selector(saveEditing))
         save.bezelStyle = .rounded; save.keyEquivalent = "\r"
-        let footnote = NSTextField(labelWithString: "用于侧边栏与账号轮换；未显示的账号保留原位置。")
+        let footnote = NSTextField(labelWithString: L10n.text("用于侧边栏与账号轮换；未显示的账号保留原位置。"))
         footnote.font = .systemFont(ofSize: 11); footnote.textColor = .secondaryLabelColor
         for child in [title, help, count, scroll, up, down, cancel, save, footnote] {
             child.translatesAutoresizingMaskIntoConstraints = false; view.addSubview(child)
@@ -102,7 +102,7 @@ enum AccountOrder {
     }
     func run() -> Bool {
         let window = NSWindow(contentRect: view.frame, styleMask: [.titled, .closable], backing: .buffered, defer: false)
-        window.title = "调整账号顺序"; window.contentView = view
+        window.title = L10n.text("调整账号顺序"); window.contentView = view
         window.isReleasedWhenClosed = false; window.delegate = self; dialog = window
         let screen = NSScreen.screens.first { $0.frame.contains(NSEvent.mouseLocation) } ?? NSScreen.main
         if let frame = screen?.visibleFrame {
@@ -133,7 +133,7 @@ enum AccountOrder {
         let secondary = full.hasPrefix(target.title + " · ") ? String(full.dropFirst(target.title.count + 3)) : (full == target.title ? "" : full)
         let detail = NSTextField(labelWithString: secondary)
         detail.font = .systemFont(ofSize: 11); detail.textColor = .secondaryLabelColor; detail.lineBreakMode = .byTruncatingMiddle
-        let grip = NSImageView(image: NSImage(systemSymbolName: "line.3.horizontal", accessibilityDescription: "拖动排序")!)
+        let grip = NSImageView(image: NSImage(systemSymbolName: "line.3.horizontal", accessibilityDescription: L10n.text("拖动排序"))!)
         grip.contentTintColor = .tertiaryLabelColor
         for child in [number, icon, name, detail, grip] { child.translatesAutoresizingMaskIntoConstraints = false; cell.addSubview(child) }
         NSLayoutConstraint.activate([

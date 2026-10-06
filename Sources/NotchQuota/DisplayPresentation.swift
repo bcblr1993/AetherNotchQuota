@@ -3,7 +3,7 @@ import SwiftUI
 
 enum DisplayMode: String, CaseIterable {
     case island, menuBar, sidebar
-    var title: String { switch self { case .island: return "灵动岛模式"; case .menuBar: return "菜单栏模式"; case .sidebar: return "侧边栏模式" } }
+    var title: String { switch self { case .island: return L10n.text("灵动岛模式"); case .menuBar: return L10n.text("菜单栏模式"); case .sidebar: return L10n.text("侧边栏模式") } }
     static func restored(_ saved: String?, majorVersion: Int) -> Self {
         saved.flatMap(Self.init(rawValue:)) ?? (majorVersion >= 27 ? .menuBar : .island)
     }
@@ -76,9 +76,9 @@ extension AppDelegate: NSPopoverDelegate {
         if temporarilyHidden || visibleTargets.isEmpty {
             closeOverview()
             quotaStatusItem?.length = NSStatusItem.squareLength
-            button.image = NSImage(systemSymbolName: temporarilyHidden ? "eye.slash" : "slider.horizontal.3", accessibilityDescription: "AetherNotchQuota 设置")
+            button.image = NSImage(systemSymbolName: temporarilyHidden ? "eye.slash" : "slider.horizontal.3", accessibilityDescription: L10n.text("AetherNotchQuota 设置"))
             button.title = ""; button.attributedTitle = NSAttributedString(string: "")
-            button.toolTip = temporarilyHidden ? "AetherNotchQuota · 点击立即显示" : "AetherNotchQuota · 选择显示的账号"
+            button.toolTip = temporarilyHidden ? L10n.text("AetherNotchQuota · 点击立即显示") : L10n.text("AetherNotchQuota · 选择显示的账号")
         } else {
             quotaStatusItem?.length = 74
             button.image = MenuBarArtwork.icon
@@ -86,7 +86,7 @@ extension AppDelegate: NSPopoverDelegate {
             let value = states[target]?.snapshot?.remaining
             let text = value.map { "\(Int($0.rounded()))%" } ?? "—"
             button.attributedTitle = NSAttributedString(string: text, attributes: [.font: NSFont.monospacedDigitSystemFont(ofSize: 12, weight: .medium), .foregroundColor: QuotaTint.color(value)])
-            button.toolTip = "\(displayTitle(target)) · \(text) · 点击查看账号详情"
+            button.toolTip = L10n.format("{0} · {1} · 点击查看账号详情", String(describing: displayTitle(target)), String(describing: text))
         }
         button.setAccessibilityLabel(button.toolTip)
         if overviewPopover?.isShown == true { updateOverview() }
@@ -106,7 +106,7 @@ extension AppDelegate: NSPopoverDelegate {
         overviewModel.accounts = visibleTargets.filter { $0 == target }.map { candidate in
             let custom = accountAliases[candidate.id].flatMap { $0.isEmpty ? nil : $0 }
             return OverviewAccount(id: candidate.id, title: custom ?? candidate.title,
-                subtitle: accountNames[candidate.id] ?? (candidate.provider == .antigravity ? "账号信息读取中" : ""),
+                subtitle: accountNames[candidate.id] ?? (candidate.provider == .antigravity ? L10n.text("账号信息读取中") : ""),
                 image: accountAvatars[candidate.id] ?? candidate.provider.icon, state: states[candidate] ?? DisplayState())
         }
         if displayMode == .menuBar { resizeOverview() }

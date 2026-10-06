@@ -52,6 +52,8 @@ AetherNotchQuota 是 Apple Silicon Mac 上的原生 AI 订阅额度助手。把 
 2. 下载正式版 DMG，将 **AetherNotchQuota** 拖入“应用程序”后启动；系统询问读取登录钥匙串时，按需允许。
 3. 右键打开菜单，在“显示的应用”中勾选账号，在“设置与更新”中选择显示模式、卡通外观和开机启动。
 
+支持简体中文、English 和日本語；右键 → 设置与更新 → 语言可跟随系统或手动切换。
+
 支持 **Apple Silicon（M 系列）· macOS 13+**。原应用关闭后仍可使用有效登录查询额度，无需额外安装 Homebrew、Python 或 Node。
 
 正式版经过 Developer ID 签名和 Apple 公证，使用 Sparkle 在应用内检查、下载、校验和安装更新。默认每天检查一次；检查更新不会自动下载或安装。

@@ -1,10 +1,10 @@
 import AppKit
 
 extension AppDelegate {
-    static let hideDurations: [(title: String, seconds: TimeInterval)] = [
-        ("15 分钟", 15 * 60), ("1 小时", 60 * 60),
-        ("3 小时", 3 * 60 * 60), ("5 小时", 5 * 60 * 60)
-    ]
+    static var hideDurations: [(title: String, seconds: TimeInterval)] { [
+        (L10n.text("15 分钟"), 15 * 60), (L10n.text("1 小时"), 60 * 60),
+        (L10n.text("3 小时"), 3 * 60 * 60), (L10n.text("5 小时"), 5 * 60 * 60)
+    ] }
     // Keep the panel hidden until the deadline is explicitly reconciled, including after sleep.
     var temporarilyHidden: Bool { hiddenUntil != nil }
 
@@ -51,10 +51,10 @@ extension AppDelegate {
     }
     func appendTemporaryVisibilityMenu(to menu: NSMenu) {
         if let hiddenUntil {
-            let time = DateFormatter.localizedString(from: hiddenUntil, dateStyle: .none, timeStyle: .short)
-            let info = NSMenuItem(title: "隐藏至 \(time) · 点击 Dock 可恢复", action: nil, keyEquivalent: "")
+            let time = L10n.time(hiddenUntil)
+            let info = NSMenuItem(title: L10n.format("隐藏至 {0} · 点击 Dock 可恢复", String(describing: time)), action: nil, keyEquivalent: "")
             info.isEnabled = false; menu.addItem(info)
-            let restore = NSMenuItem(title: "立即显示", action: #selector(restoreTemporaryVisibility), keyEquivalent: "")
+            let restore = NSMenuItem(title: L10n.text("立即显示"), action: #selector(restoreTemporaryVisibility), keyEquivalent: "")
             restore.target = self; menu.addItem(restore)
         }
         let choices = NSMenu(); choices.autoenablesItems = false; choices.minimumWidth = 150
@@ -62,7 +62,7 @@ extension AppDelegate {
             let item = NSMenuItem(title: duration.title, action: #selector(selectHideDuration(_:)), keyEquivalent: "")
             item.target = self; item.tag = Int(duration.seconds); choices.addItem(item)
         }
-        let item = NSMenuItem(title: "临时隐藏", action: nil, keyEquivalent: "")
+        let item = NSMenuItem(title: L10n.text("临时隐藏"), action: nil, keyEquivalent: "")
         item.submenu = choices; menu.addItem(item)
     }
 }

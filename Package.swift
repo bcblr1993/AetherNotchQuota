@@ -3,6 +3,7 @@ import PackageDescription
 
 let package = Package(
     name: "NotchQuota",
+    defaultLocalization: "en",
     platforms: [.macOS(.v13)],
     products: [.executable(name: "NotchQuota", targets: ["NotchQuota"])],
     dependencies: [.package(url: "https://github.com/sparkle-project/Sparkle", exact: "2.9.6")],

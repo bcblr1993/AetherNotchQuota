@@ -36,9 +36,9 @@ struct RecoveryAnnouncement {
         if windows.count > 1 {
             let hasFive = windows.contains { $0 == "5 小时" || $0.hasSuffix(" · 5 小时") }
             let hasWeek = windows.contains { $0 == "每周" || $0.hasSuffix(" · 每周") }
-            return hasFive && hasWeek ? "5 小时与每周额度" : "多项额度"
+            return hasFive && hasWeek ? L10n.text("5 小时与每周额度") : L10n.text("多项额度")
         }
-        return windows.first ?? "额度"
+        return windows.first.map { L10n.quotaLabel($0) } ?? L10n.text("额度")
     }
 }
 
@@ -118,12 +118,12 @@ final class ThoughtView: NSView {
         let stale = account.state.stale
         let quota = account.state.snapshot?.windows.filter { $0.remaining != nil }.min { $0.remaining! < $1.remaining! }
         let percent = quota?.remaining.map { "\(Int($0.rounded()))%" } ?? "—"
-        text("剩余", CGRect(x: 36, y: 62, width: 42, height: 25), size: 16, color: ink)
+        text(L10n.text("剩余"), CGRect(x: 36, y: 62, width: 42, height: 25), size: 16, color: ink)
         text(percent, CGRect(x: 80, y: 60, width: 120, height: 30), size: 24,
              color: stale ? .secondaryLabelColor : QuotaTint.color(quota?.remaining), bold: true)
-        let reset = quota.map { "\($0.label) · \(QuotaSummary.resetText($0.reset))" } ?? "暂时无法读取额度"
+        let reset = quota.map { "\(L10n.quotaLabel($0.label)) · \(QuotaSummary.resetText($0.reset))" } ?? L10n.text("暂时无法读取额度")
         text(reset, CGRect(x: 36, y: 40, width: 210, height: 17), size: 10, color: ink.withAlphaComponent(0.65))
-        let subtitle = [stale ? "上次数据" : "", account.subtitle].filter { !$0.isEmpty }.joined(separator: " · ")
+        let subtitle = [stale ? L10n.text("上次数据") : "", account.subtitle].filter { !$0.isEmpty }.joined(separator: " · ")
         text(subtitle, CGRect(x: 36, y: 22, width: 210, height: 15), size: 9, color: ink.withAlphaComponent(0.55))
         let tip = min(bounds.width - 12, max(12, anchor.midX - windowFrame.minX))
         for (index, dot) in dots.enumerated() {
@@ -133,7 +133,7 @@ final class ThoughtView: NSView {
                                    y: above ? 5 + step * 12 : bounds.height - 5 - step * 12)
         }
         CATransaction.commit()
-        setAccessibilityElement(true); setAccessibilityLabel("\(account.title) \(subtitle) 剩余 \(percent)，\(reset)")
+        setAccessibilityElement(true); setAccessibilityLabel(L10n.format("{0} {1} 剩余 {2}，{3}", String(describing: account.title), String(describing: subtitle), String(describing: percent), String(describing: reset)))
         guard animated else { return }
         for (index, part) in (dots + [cloud]).enumerated() {
             let fade = CABasicAnimation(keyPath: "opacity"); fade.fromValue = 0; fade.toValue = 1
@@ -188,12 +188,12 @@ final class ThoughtView: NSView {
               frame: CGRect(x: compact ? 50 : 60, y: compact ? 84 : 92,
                             width: compact ? 161 : 177, height: 18),
               size: compact ? 10 : 11, color: ink, bold: true)
-        label(announcement.style == .bounce ? "100% 恢复啦" : "已恢复至 100%",
+        label(announcement.style == .bounce ? L10n.text("100% 恢复啦") : L10n.text("已恢复至 100%"),
               frame: CGRect(x: compact ? 25 : 35, y: compact ? 49 : 55,
                             width: compact ? 197 : 210, height: 31),
               size: compact ? 21 : 24, color: green, bold: true)
         if !compact {
-            label("新一轮额度已开始", frame: CGRect(x: 36, y: 36, width: 190, height: 16),
+            label(L10n.text("新一轮额度已开始"), frame: CGRect(x: 36, y: 36, width: 190, height: 16),
                   size: 10, color: ink.withAlphaComponent(0.6), bold: false)
         }
         if announcement.style == .bounce {
@@ -217,7 +217,7 @@ final class ThoughtView: NSView {
             }
         }
         CATransaction.commit()
-        setAccessibilityLabel("\(account.title) \(announcement.title)已恢复至 100%")
+        setAccessibilityLabel(L10n.format("{0} {1}已恢复至 100%", String(describing: account.title), String(describing: announcement.title)))
         guard animated else { return }
         let fade = CABasicAnimation(keyPath: "opacity")
         fade.fromValue = 0; fade.toValue = 1; fade.duration = 0.24
@@ -248,7 +248,7 @@ final class ThoughtView: NSView {
         panel.backgroundColor = .clear; panel.isOpaque = false; panel.hasShadow = false
         panel.level = .floating; panel.hidesOnDeactivate = false; panel.isReleasedWhenClosed = false
         panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .ignoresCycle]
-        panel.contentView = view; panel.title = "额度思考泡泡"
+        panel.contentView = view; panel.title = L10n.text("额度思考泡泡")
         view.enter = { [weak self] in self?.dismissal?.cancel(); self?.dismissal = nil }
         view.leave = { [weak self] in self?.dismiss(after: 0.3) }
     }

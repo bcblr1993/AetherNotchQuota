@@ -10,7 +10,7 @@ final class AppUpdates: NSObject, SPUStandardUserDriverDelegate {
     var onChange: ((String?) -> Void)?
     var canCheck: Bool { controller?.updater.canCheckForUpdates ?? false }
     var automaticallyChecks: Bool { controller?.updater.automaticallyChecksForUpdates ?? false }
-    var menuTitle: String { availableVersion.map { "更新至 \($0)…" } ?? "检查更新…" }
+    var menuTitle: String { availableVersion.map { L10n.format("更新至 {0}…", String(describing: $0)) } ?? L10n.text("检查更新…") }
 
     func start() {
         guard controller == nil else { return }

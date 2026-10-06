@@ -90,8 +90,8 @@ extension AppDelegate {
             for instance in instances {
                 let candidate = QuotaTarget(provider: .antigravity, instance: instance)
                 var title = displayTitle(candidate)
-                if !instance.supported { title += " · 未识别登录来源" }
-                if blockedAccounts.contains(instance.id) { title += " · 账号已变化，重新勾选确认" }
+                if !instance.supported { title += L10n.text(" · 未识别登录来源") }
+                if blockedAccounts.contains(instance.id) { title += L10n.text(" · 账号已变化，重新勾选确认") }
                 let item = NSMenuItem(title: title, action: #selector(toggleInstance(_:)), keyEquivalent: "")
                 item.target = self; item.representedObject = instance.id; item.isEnabled = instance.supported
                 item.state = visibleTargets.contains(candidate) ? .on : .off
@@ -99,22 +99,22 @@ extension AppDelegate {
                 accounts.addItem(item)
             }
             if inlineAccounts == nil {
-                let parent = NSMenuItem(title: "Antigravity 多实例", action: nil, keyEquivalent: ""); parent.submenu = accounts; menu.addItem(parent)
+                let parent = NSMenuItem(title: L10n.text("Antigravity 多实例"), action: nil, keyEquivalent: ""); parent.submenu = accounts; menu.addItem(parent)
             }
         }
         let settings = NSMenu(); settings.autoenablesItems = false; settings.minimumWidth = 200
-        for (title, action) in [("重新扫描实例", #selector(scanInstances)), ("手动添加实例…", #selector(addManualInstance)), ("修改当前账号别名…", #selector(renameAccount))] {
+        for (title, action) in [(L10n.text("重新扫描实例"), #selector(scanInstances)), (L10n.text("手动添加实例…"), #selector(addManualInstance)), (L10n.text("修改当前账号别名…"), #selector(renameAccount))] {
             let item = NSMenuItem(title: title, action: action, keyEquivalent: ""); item.target = self
             item.isEnabled = !demo && !testMode && (action != #selector(renameAccount) || !visibleTargets.isEmpty)
             settings.addItem(item)
         }
-        let ordering = NSMenuItem(title: "调整账号顺序…", action: #selector(editAccountOrder), keyEquivalent: "")
+        let ordering = NSMenuItem(title: L10n.text("调整账号顺序…"), action: #selector(editAccountOrder), keyEquivalent: "")
         ordering.target = self; ordering.isEnabled = visibleTargets.count > 1
         settings.addItem(ordering)
         if let instance = target.instance, instance.manual {
-            let remove = NSMenuItem(title: "移除此手动实例", action: #selector(removeManualInstance), keyEquivalent: ""); remove.target = self; settings.addItem(remove)
+            let remove = NSMenuItem(title: L10n.text("移除此手动实例"), action: #selector(removeManualInstance), keyEquivalent: ""); remove.target = self; settings.addItem(remove)
         }
-        let parent = NSMenuItem(title: "账号设置", action: nil, keyEquivalent: ""); parent.submenu = settings; menu.addItem(parent)
+        let parent = NSMenuItem(title: L10n.text("账号设置"), action: nil, keyEquivalent: ""); parent.submenu = settings; menu.addItem(parent)
     }
     @objc func toggleInstance(_ sender: NSMenuItem) {
         guard let id = sender.representedObject as? String, let instance = instances.first(where: { $0.id == id }), instance.supported else { return }
@@ -126,9 +126,9 @@ extension AppDelegate {
     @objc func renameAccount() {
         let candidate = target
         activeMenu?.cancelTracking()
-        let alert = NSAlert(); alert.messageText = "修改账号别名"; alert.informativeText = "仅在本机显示，不修改原应用账号。"
+        let alert = NSAlert(); alert.messageText = L10n.text("修改账号别名"); alert.informativeText = L10n.text("仅在本机显示，不修改原应用账号。")
         let field = NSTextField(string: accountAliases[candidate.id] ?? ""); field.frame = NSRect(x: 0, y: 0, width: 260, height: 24); field.placeholderString = candidate.title
-        alert.accessoryView = field; alert.addButton(withTitle: "保存"); alert.addButton(withTitle: "取消")
+        alert.accessoryView = field; alert.addButton(withTitle: L10n.text("保存")); alert.addButton(withTitle: L10n.text("取消"))
         NSApp.activate(ignoringOtherApps: true)
         guard alert.runModal() == .alertFirstButtonReturn else { return }
         accountAliases[candidate.id] = String(field.stringValue.trimmingCharacters(in: .whitespacesAndNewlines).prefix(40))
@@ -136,9 +136,9 @@ extension AppDelegate {
     }
     @MainActor static func credentialFilePanel() -> NSOpenPanel {
         let panel = NSOpenPanel()
-        panel.title = "第 2/2 步：选择该实例的 OAuth 认证文件"
-        panel.message = "可选择 standalone-oauth-token 等无扩展名文件或 JSON 文件，无需重命名。请选择与上一步应用对应的文件；不会修改原文件。"
-        panel.prompt = "添加实例"
+        panel.title = L10n.text("第 2/2 步：选择该实例的 OAuth 认证文件")
+        panel.message = L10n.text("可选择 standalone-oauth-token 等无扩展名文件或 JSON 文件，无需重命名。请选择与上一步应用对应的文件；不会修改原文件。")
+        panel.prompt = L10n.text("添加实例")
         panel.allowedContentTypes = []
         panel.allowsOtherFileTypes = true
         panel.canChooseFiles = true; panel.canChooseDirectories = false
@@ -149,18 +149,18 @@ extension AppDelegate {
     }
     @objc func addManualInstance() {
         activeMenu?.cancelTracking(); NSApp.activate(ignoringOtherApps: true)
-        let app = NSOpenPanel(); app.title = "第 1/2 步：选择 Antigravity 实例应用"
-        app.message = "先选择对应的 Antigravity .app 应用；下一步再选择 OAuth 认证文件。"
-        app.prompt = "下一步"; app.allowedContentTypes = [.applicationBundle]; app.allowsMultipleSelection = false
+        let app = NSOpenPanel(); app.title = L10n.text("第 1/2 步：选择 Antigravity 实例应用")
+        app.message = L10n.text("先选择对应的 Antigravity .app 应用；下一步再选择 OAuth 认证文件。")
+        app.prompt = L10n.text("下一步"); app.allowedContentTypes = [.applicationBundle]; app.allowsMultipleSelection = false
         app.directoryURL = URL(fileURLWithPath: "/Applications")
         guard app.runModal() == .OK, let appURL = app.url else { return }
-        guard AntigravityDiscovery.isApplication(appURL) else { accountAlert("所选应用不是支持的 Antigravity 实例"); return }
+        guard AntigravityDiscovery.isApplication(appURL) else { accountAlert(L10n.text("所选应用不是支持的 Antigravity 实例")); return }
         let file = Self.credentialFilePanel()
         NSApp.activate(ignoringOtherApps: true)
         guard file.runModal() == .OK, let fileURL = file.url else { return }
         let instance = AntigravityInstance(appPath: appURL.path, credentialPath: fileURL.path, name: appURL.deletingPathExtension().lastPathComponent, manual: true)
         do { _ = try GoogleCredentials.read(instance: instance) }
-        catch { accountAlert("无法读取受支持的登录格式，请确认属于该实例。"); return }
+        catch { accountAlert(L10n.text("无法读取受支持的登录格式，请确认属于该实例。")); return }
         manualInstances.removeAll { $0.appPath == instance.appPath && $0.credentialPath == instance.credentialPath }
         manualInstances.append(instance); saveAccountPreferences(); scanInstances()
     }
@@ -171,7 +171,7 @@ extension AppDelegate {
         saveAccountPreferences(); scanInstances()
     }
     func accountAlert(_ message: String) {
-        let alert = NSAlert(); alert.messageText = message; alert.addButton(withTitle: "好"); alert.runModal()
+        let alert = NSAlert(); alert.messageText = L10n.message(message); alert.addButton(withTitle: L10n.text("好")); alert.runModal()
     }
     func updateRecoveryItem() {
         // Crowded menu bars may conceal status items behind the camera notch.
@@ -183,13 +183,13 @@ extension AppDelegate {
         let needsRecovery = displayMode != .menuBar && (temporarilyHidden || (visibleTargets.isEmpty && (!detectedApps.isEmpty || !instances.isEmpty)))
         if needsRecovery && recoveryItem == nil {
             let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
-            item.button?.image = NSImage(systemSymbolName: "slider.horizontal.3", accessibilityDescription: "AetherNotchQuota 账号设置")
-            item.button?.toolTip = "AetherNotchQuota · 选择显示的账号"
+            item.button?.image = NSImage(systemSymbolName: "slider.horizontal.3", accessibilityDescription: L10n.text("AetherNotchQuota 账号设置"))
+            item.button?.toolTip = L10n.text("AetherNotchQuota · 选择显示的账号")
             item.menu = makeMenu(); recoveryItem = item
         } else if !needsRecovery, let item = recoveryItem { NSStatusBar.system.removeStatusItem(item); recoveryItem = nil }
         else if needsRecovery { recoveryItem?.menu = makeMenu() }
-        recoveryItem?.button?.image = NSImage(systemSymbolName: temporarilyHidden ? "eye.slash" : "slider.horizontal.3", accessibilityDescription: "AetherNotchQuota 设置")
-        recoveryItem?.button?.toolTip = temporarilyHidden ? "AetherNotchQuota · 临时隐藏，点击可立即显示" : "AetherNotchQuota · 选择显示的账号"
+        recoveryItem?.button?.image = NSImage(systemSymbolName: temporarilyHidden ? "eye.slash" : "slider.horizontal.3", accessibilityDescription: L10n.text("AetherNotchQuota 设置"))
+        recoveryItem?.button?.toolTip = temporarilyHidden ? L10n.text("AetherNotchQuota · 临时隐藏，点击可立即显示") : L10n.text("AetherNotchQuota · 选择显示的账号")
         updateMenuBarPresentation()
     }
 }

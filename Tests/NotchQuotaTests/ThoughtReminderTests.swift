@@ -29,7 +29,7 @@ final class ThoughtReminderTests: XCTestCase {
             .init(id: "other", label: "月度", remaining: 100, reset: nil)
         ])
         XCTAssertEqual(QuotaRecoveryDetector.restoredWindows(previous: before, current: after), ["Gemini · 每周"])
-        XCTAssertEqual(RecoveryAnnouncement(windows: ["5 小时", "每周"], style: .cloud).title, "5 小时与每周额度")
+        XCTAssertEqual(RecoveryAnnouncement(windows: ["5 小时", "每周"], style: .cloud).title, L10n.text("5 小时与每周额度"))
     }
     func testRotationSurvivesAccountRemovalAndReordering() {
         var cycle = ReminderCycle()

@@ -37,9 +37,9 @@ final class DisplayModeTests: XCTestCase {
     func testUnknownWindowsAreNotInvented() {
         let summary = QuotaSummary([.init(id: "legacy", label: "Gemini Pro", remaining: 80)])
         XCTAssertNil(summary.fiveHour); XCTAssertNil(summary.weekly)
-        XCTAssertEqual(QuotaSummary.resetText(nil), "未提供重置时间")
+        XCTAssertEqual(QuotaSummary.resetText(nil), L10n.text("未提供重置时间"))
         let now = Date()
-        XCTAssertEqual(QuotaSummary.resetText(now, now: now), "等待刷新")
-        XCTAssertEqual(QuotaSummary.resetText(now.addingTimeInterval(3660), now: now), "1时1分后")
+        XCTAssertEqual(QuotaSummary.resetText(now, now: now), L10n.text("等待刷新"))
+        XCTAssertEqual(QuotaSummary.resetText(now.addingTimeInterval(3660), now: now), L10n.format("{0}时{1}分后", "1", "1"))
     }
 }

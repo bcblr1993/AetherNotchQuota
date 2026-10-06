@@ -10,6 +10,11 @@ ACTUAL="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$APP/C
 [ -f "$APP/Contents/Resources/AppIcon.icns" ]
 [ -d "$APP/Contents/Resources/NotchQuota_NotchQuota.bundle" ]
 [ -d "$APP/Contents/Frameworks/Sparkle.framework" ]
+RESOURCE_ROOT="$APP/Contents/Resources/NotchQuota_NotchQuota.bundle"
+if [ -d "$RESOURCE_ROOT/Contents/Resources" ]; then RESOURCE_ROOT="$RESOURCE_ROOT/Contents/Resources"; fi
+for LANGUAGE in zh-Hans en ja; do
+  [ -f "$RESOURCE_ROOT/$LANGUAGE.lproj/Localizable.strings" ]
+done
 [ -f "$APP/Contents/Resources/Sparkle-LICENSE" ]
 /usr/libexec/PlistBuddy -c 'Print :SUPublicEDKey' "$APP/Contents/Info.plist" >/dev/null
 /usr/libexec/PlistBuddy -c 'Print :SUFeedURL' "$APP/Contents/Info.plist" >/dev/null
