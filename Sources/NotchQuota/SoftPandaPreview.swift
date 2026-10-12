@@ -25,14 +25,14 @@ import UniformTypeIdentifiers
         for name in [NSWorkspace.willSleepNotification, NSWorkspace.screensDidSleepNotification,
                      NSWorkspace.accessibilityDisplayOptionsDidChangeNotification] {
             observers.append(NSWorkspace.shared.notificationCenter.addObserver(forName: name, object: nil, queue: .main) { [weak self] _ in
-                Task { @MainActor in self?.surface.panda.stop() }
+                Task { @MainActor [weak self] in self?.surface.panda.stop() }
             })
         }
         observers.append(NotificationCenter.default.addObserver(forName: .NSProcessInfoPowerStateDidChange, object: nil, queue: .main) { [weak self] _ in
-            Task { @MainActor in self?.surface.panda.stop() }
+            Task { @MainActor [weak self] in self?.surface.panda.stop() }
         })
         observers.append(NotificationCenter.default.addObserver(forName: NSApplication.didHideNotification, object: nil, queue: .main) { [weak self] _ in
-            Task { @MainActor in self?.surface.panda.stop() }
+            Task { @MainActor [weak self] in self?.surface.panda.stop() }
         })
     }
     deinit {

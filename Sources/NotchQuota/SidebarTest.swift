@@ -17,7 +17,7 @@ extension AppDelegate {
             setDisplayMode(.sidebar); await wait()
             guard let bar = sidebar else { check(false, "controller created"); exit(1) }
             if CommandLine.arguments.contains("--panda-release-test"), let screen = NSScreen.main {
-                func capturePanda(_ name: String) {
+                @MainActor func capturePanda(_ name: String) {
                     guard let directory = ProcessInfo.processInfo.environment["NOTCHQUOTA_SMOKE_DIR"], let layer = bar.surface.layer else { return }
                     let size = bar.surface.bounds.size
                     guard let context = CGContext(data: nil, width: Int(size.width * 2), height: Int(size.height * 2), bitsPerComponent: 8, bytesPerRow: 0, space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue) else { return }
