@@ -8,6 +8,7 @@ codesign --verify --deep --strict "$APP"
 ACTUAL="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$APP/Contents/Info.plist")"
 [ "$ACTUAL" = "$VERSION" ]
 [ -f "$APP/Contents/Resources/AppIcon.icns" ]
+cmp "$ROOT/Packaging/AppIcon.icns" "$APP/Contents/Resources/AppIcon.icns"
 [ -d "$APP/Contents/Resources/NotchQuota_NotchQuota.bundle" ]
 [ -d "$APP/Contents/Frameworks/Sparkle.framework" ]
 RESOURCE_ROOT="$APP/Contents/Resources/NotchQuota_NotchQuota.bundle"

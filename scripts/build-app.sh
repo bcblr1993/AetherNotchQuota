@@ -3,6 +3,7 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 VERSION="$(tr -d '\n' < VERSION)"
+"$ROOT/scripts/make-icon.sh"
 APP="$ROOT/build/AetherNotchQuota.app"
 swift build -c release --triple arm64-apple-macosx13.0
 BIN_DIR="$(swift build -c release --triple arm64-apple-macosx13.0 --show-bin-path)"

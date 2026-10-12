@@ -1,5 +1,7 @@
 # AetherNotchQuota
 
+<img src="Packaging/AppIcon-1024.png" width="112" alt="AetherNotchQuota 应用图标" />
+
 [![CI](https://github.com/bcblr1993/AetherNotchQuota/actions/workflows/ci.yml/badge.svg)](https://github.com/bcblr1993/AetherNotchQuota/actions/workflows/ci.yml)
 [![下载最新版](https://img.shields.io/github/v/release/bcblr1993/AetherNotchQuota?label=下载最新版)](https://github.com/bcblr1993/AetherNotchQuota/releases/latest)
 
