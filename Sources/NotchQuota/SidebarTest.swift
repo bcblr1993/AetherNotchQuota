@@ -16,6 +16,51 @@ extension AppDelegate {
             }
             setDisplayMode(.sidebar); await wait()
             guard let bar = sidebar else { check(false, "controller created"); exit(1) }
+            if CommandLine.arguments.contains("--panda-release-test"), let screen = NSScreen.main {
+                @MainActor func capturePanda(_ name: String) {
+                    guard let directory = ProcessInfo.processInfo.environment["NOTCHQUOTA_SMOKE_DIR"], let layer = bar.surface.layer else { return }
+                    let size = bar.surface.bounds.size
+                    guard let context = CGContext(data: nil, width: Int(size.width * 2), height: Int(size.height * 2), bitsPerComponent: 8, bytesPerRow: 0, space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue) else { return }
+                    context.scaleBy(x: 2, y: 2); (layer.presentation() ?? layer).render(in: context)
+                    if let image = context.makeImage() {
+                        try? NSBitmapImageRep(cgImage: image).representation(using: .png, properties: [:])?.write(to: URL(fileURLWithPath: directory).appendingPathComponent(name + ".png"))
+                    }
+                }
+                let requests = lastAttempt
+                bar.setAppearance(.panda)
+                bar.place(at: NSPoint(x: screen.visibleFrame.midX, y: screen.visibleFrame.midY), screen: screen, keepCollapsed: true)
+                bar.exitBar(); await wait(0.6)
+                check(bar.isFloatingPanda && bar.canPlayPanda && bar.hasPandaWork, "C panda floats and schedules one daily action")
+                bar.togglePandaDaily()
+                check(!bar.hasPandaWork, "daily off cancels scheduled work")
+                bar.enterBar()
+                check(bar.collapsed, "hover keeps floating panda interactive")
+                bar.interactWithPanda(clickCount: 1)
+                check(bar.pandaScene == .drink, "single click starts drink with daily off")
+                updateSidebar()
+                check(bar.pandaScene == .drink && bar.collapsed, "cached refresh preserves current scene and collapse")
+                await wait(1.5); capturePanda("panda-drink")
+                bar.interactWithPanda(clickCount: 1)
+                check(bar.pandaScene == .music, "next single click replaces drink with music")
+                await wait(1.6); capturePanda("panda-music")
+                bar.interactWithPanda(clickCount: 2)
+                check(!bar.collapsed && bar.pandaScene == nil, "double click opens quota and stops animation")
+                bar.exitBar(); bar.setCollapsed(true); await wait(0.6)
+                suppressMotion = true; updateSidebar(); bar.playPanda(.drink)
+                check(bar.pandaScene == nil && !bar.hasPandaWork, "reduced motion blocks manual and daily playback")
+                suppressMotion = false; updateSidebar(); bar.togglePandaDaily()
+                bar.cancelPanda(); bar.schedulePanda(after: 0.1); await wait(0.3)
+                check(bar.pandaScene != nil && bar.hasPandaWork, "automatic action plays and schedules a quiet gap")
+                bar.hide()
+                check(bar.pandaScene == nil && !bar.hasPandaWork && !bar.hasEmblemAnimations, "hide clears scene and timer")
+                updateSidebar(); bar.setAppearance(.bunny)
+                check(bar.pandaScene == nil && !bar.hasPandaWork, "other characters retain their existing artwork without panda work")
+                check(lastAttempt == requests, "all pet interactions are quota-cache-only")
+                bar.hide()
+                print("PANDA RELEASE COMPLETE: \(failures == 0 ? "PASS" : "FAIL")"); fflush(stdout)
+                exit(failures == 0 ? 0 : 1)
+            }
+
             check(bar.panel.isVisible && !panel.isVisible && quotaStatusItem == nil, "third mode owns only sidebar")
             check(bar.cells.count == visibleTargets.count && rotationTimer == nil, "selected accounts stay fixed without rotation timer")
             let requests = lastAttempt

@@ -15,6 +15,10 @@ enum SidebarMascotArtwork {
     static func image(for style: SidebarAppearance) -> CGImage? {
         let key = style.rawValue as NSString
         if let image = images.object(forKey: key) { return image }
+        if style == .panda, let image = try? SoftPandaAnimation().frames(for: .drink).first {
+            images.setObject(image, forKey: key, cost: image.bytesPerRow * image.height)
+            return image
+        }
         guard let url = ResourceLocator.icon("storybook-" + style.rawValue),
               let source = CGImageSourceCreateWithURL(url as CFURL, nil),
               let image = CGImageSourceCreateThumbnailAtIndex(source, 0, [

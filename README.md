@@ -95,3 +95,9 @@ open build/AetherNotchQuota.app
 本地开发构建不等同于已公证的正式版。项目原创代码采用 [MIT](LICENSE) 许可证；第三方素材见 [声明](THIRD_PARTY_NOTICES.md)。欢迎提交 Issue / PR。
 
 图片为本次发布对应的原生界面渲染，额度、账号名称和时间均为演示数据。
+
+### 0.1.26 · 熊猫桌宠首版
+
+选择侧边栏 → 收起外观 → 糯米熊猫，拖离边缘后单击互动、双击查看额度。熊猫拥有喝水与戴耳机听音乐两段全身动作，也可在设置中关闭自动日常。其余八只小伙伴保留现有外观。
+
+![熊猫喝水](docs/images/panda-drink-026.png) ![熊猫听音乐](docs/images/panda-music-026.png)

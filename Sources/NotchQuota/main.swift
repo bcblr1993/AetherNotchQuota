@@ -68,6 +68,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     var testMode: Bool { animationTestMode || CommandLine.arguments.contains("--localization-smoke") || CommandLine.arguments.contains("--ui-smoke") || CommandLine.arguments.contains("--sidebar-test") }
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory)
+        if CommandLine.arguments.contains(where: { ["--soft-panda-demo", "--soft-panda-preview", "--soft-panda-benchmark"].contains($0) }) {
+            Task { @MainActor in await SoftPandaPreview.run() }; return
+        }
         if !demo && !testMode {
             let others = NSRunningApplication.runningApplications(withBundleIdentifier: Bundle.main.bundleIdentifier ?? "io.github.bcblr1993.NotchQuota")
             if others.contains(where: { $0.processIdentifier != ProcessInfo.processInfo.processIdentifier }) { NSApp.terminate(nil); return }
@@ -136,6 +139,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         else if testMode { runUISmoke() }
     }
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
+        if CommandLine.arguments.contains(where: { $0.hasPrefix("--soft-panda-") }) { return false }
         if temporarilyHidden { restoreTemporaryVisibility() }
         else if displayMode == .menuBar { showOverview() }
         else { show() }
@@ -450,6 +454,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             }
             let appearanceItem = NSMenuItem(title: L10n.text("收起外观"), action: nil, keyEquivalent: "")
             appearanceItem.submenu = appearanceMenu; settingsMenu.addItem(appearanceItem)
+            if sidebar?.appearance == .panda {
+                let daily = NSMenuItem(title: L10n.text("熊猫日常动作"), action: #selector(togglePandaDaily), keyEquivalent: "")
+                daily.target = self; daily.state = sidebar?.pandaDailyEnabled == true ? .on : .off
+                settingsMenu.addItem(daily)
+                let actions = NSMenu(); actions.autoenablesItems = false
+                for scene in SoftPandaScene.allCases {
+                    let item = NSMenuItem(title: L10n.text(scene.title), action: #selector(playPandaScene(_:)), keyEquivalent: "")
+                    item.target = self; item.representedObject = scene.rawValue
+                    item.isEnabled = sidebar?.canPlayPanda == true; actions.addItem(item)
+                }
+                let actionMenu = NSMenuItem(title: L10n.text("陪熊猫玩（拖出侧栏后）"), action: nil, keyEquivalent: "")
+                actionMenu.submenu = actions; settingsMenu.addItem(actionMenu)
+            }
             settingsMenu.addItem(.separator())
         }
         let loginState = demo || testMode ? LoginItemState.disabled : LaunchAtLogin.state
@@ -496,6 +513,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             accountBindings[candidate.rawValue] = nil; excludedProviders.remove(candidate); saveAccountPreferences()
         } else if !excludedProviders.insert(candidate).inserted { excludedProviders.remove(candidate) }
         saveProviderPreferences(); discoverInstalled(); scheduleRotation(); refresh(.standard(candidate))
+    }
+    @objc func togglePandaDaily() { sidebar?.togglePandaDaily() }
+    @objc func playPandaScene(_ sender: NSMenuItem) {
+        guard let raw = sender.representedObject as? String, let scene = SoftPandaScene(rawValue: raw) else { return }
+        sidebar?.playPanda(scene)
     }
     @objc func manualRefresh() { activity(); refreshAll() }
     @objc func manualRest() { rest() }
