@@ -12,7 +12,7 @@ enum SidebarAppearance: String, CaseIterable {
         return style
     }
     var isCharacter: Bool { Self.selectable.contains(self) }
-    var scale: CGFloat { isCharacter ? 2.25 : 1.5 }
+    var scale: CGFloat { self == .panda ? 3.2 : (isCharacter ? 2.25 : 1.5) }
     var accent: NSColor {
         switch self {
         case .panda: return NSColor(srgbRed: 0.39, green: 0.66, blue: 0.47, alpha: 1)
@@ -96,7 +96,10 @@ final class SidebarEmblem: CALayer {
             let mark = CAShapeLayer(); mark.path = spark; mark.fillColor = NSColor(white: 0.96, alpha: 1).cgColor
             addSublayer(mark); addSublayer(valueLabel)
         case .ghost, .bunny, .bear, .cloud, .cat, .fox, .panda, .penguin, .turtle:
-            let character = SidebarMascotArtwork.make(style: style)
+            let character: CALayer
+            if style == .panda {
+                let panda = SoftPandaAnimation(); try? panda.rest(); character = panda
+            } else { character = SidebarMascotArtwork.make(style: style) }
             character.bounds = bounds
             character.anchorPoint = CGPoint(x: 27.0 / 36, y: 13.0 / 36)
             character.position = CGPoint(x: 27, y: 13)
@@ -130,10 +133,17 @@ final class SidebarEmblem: CALayer {
     }
     func stopMotion() {
         returnCleanup?.cancel(); returnCleanup = nil
+        (leaningBody as? SoftPandaAnimation)?.stop()
         removeAllAnimations(); leaningBody?.removeAllAnimations(); confetti.removeAllAnimations()
     }
     var hasMotion: Bool { animationKeys()?.isEmpty == false || leaningBody?.animationKeys()?.isEmpty == false || confetti.animationKeys()?.isEmpty == false }
     var hasReturnMotion: Bool { animation(forKey: "returnHop") != nil && leaningBody?.animation(forKey: "returnGesture") != nil }
+    var pandaScene: SoftPandaScene? { (leaningBody as? SoftPandaAnimation)?.scene }
+    @discardableResult func playPanda(_ scene: SoftPandaScene) -> Bool {
+        guard let panda = leaningBody as? SoftPandaAnimation else { return false }
+        stopMotion()
+        return (try? panda.play(scene)) ?? false
+    }
     func playReturn() {
         guard appearance.isCharacter else { return }
         returnCleanup?.cancel()

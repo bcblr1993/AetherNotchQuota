@@ -240,6 +240,47 @@ final class SidebarSurface: NSView {
     private var pointerInBar = false, pointerInDetail = false, dragging = false
     private var dragMonitor: Any?
     private let emblem = SidebarEmblem()
+    private(set) var pandaDailyEnabled = true
+    private var pandaWork: DispatchWorkItem?
+    private var nextPandaScene: SoftPandaScene = .drink
+    private var dragClickCount = 1
+    var pandaScene: SoftPandaScene? { emblem.pandaScene }
+    var hasPandaWork: Bool { pandaWork != nil }
+    var isFloatingPanda: Bool { appearance == .panda && !docked && collapsed }
+    var canPlayPanda: Bool {
+        isFloatingPanda && panel.isVisible && !dragging && !pinned && !detail.isVisible && motion > 0 &&
+        !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion && !ProcessInfo.processInfo.isLowPowerModeEnabled
+    }
+    func cancelPanda() { pandaWork?.cancel(); pandaWork = nil; emblem.stopMotion() }
+    func schedulePanda(after delay: TimeInterval = 35) {
+        guard pandaWork == nil, pandaDailyEnabled, canPlayPanda, !pointerInBar, !pointerInDetail else { return }
+        let work = DispatchWorkItem { [weak self] in
+            guard let self else { return }
+            self.pandaWork = nil
+            guard self.pandaDailyEnabled, self.canPlayPanda, !self.pointerInBar, !self.pointerInDetail else { return }
+            if self.reminder.panel.isVisible || self.reminderTask != nil { self.schedulePanda(); return }
+            self.playPanda(self.nextPandaScene)
+        }
+        pandaWork = work
+        DispatchQueue.main.asyncAfter(deadline: .now() + delay, execute: work)
+    }
+    func playPanda(_ scene: SoftPandaScene) {
+        guard canPlayPanda else { return }
+        cancelPanda(); reminderTask?.cancel(); reminderTask = nil; reminder.hide()
+        if emblem.playPanda(scene) {
+            nextPandaScene = scene == .drink ? .music : .drink
+            schedulePanda(after: scene.duration + 35)
+        }
+    }
+    func interactWithPanda(clickCount: Int) {
+        guard isFloatingPanda else { return }
+        if clickCount > 1 { setCollapsed(false) }
+        else { playPanda(nextPandaScene) }
+    }
+    func togglePandaDaily() {
+        pandaDailyEnabled.toggle(); cancelPanda(); schedulePanda()
+        if persist { UserDefaults.standard.set(pandaDailyEnabled, forKey: "pandaDailyAnimations") }
+    }
     private(set) var appearance: SidebarAppearance = .ghost
     private var screenID: UInt32?
     private var motion: TimeInterval = 0.2
@@ -286,6 +327,7 @@ final class SidebarSurface: NSView {
             }
             autoCollapse = d.object(forKey: "sidebarAutoCollapse") as? Bool ?? true
             appearance = .restored(d.string(forKey: SidebarAppearance.preferenceKey))
+            pandaDailyEnabled = d.object(forKey: "pandaDailyAnimations") as? Bool ?? true
         }
         panel.contentView = surface; surface.layer?.backgroundColor = NSColor(white: 0.035, alpha: 0.97).cgColor
         surface.applyFinish()
@@ -319,7 +361,7 @@ final class SidebarSurface: NSView {
     private var reminderCycle = ReminderCycle()
     var onReminderRefresh: ((String) async -> OverviewAccount?)?
     private var canRemind: Bool {
-        appearance.isCharacter && collapsed && panel.isVisible && !dragging && !pinned &&
+        appearance.isCharacter && collapsed && panel.isVisible && !dragging && !pinned && emblem.pandaScene == nil &&
             !pointerInBar && !pointerInDetail && !detail.isVisible
     }
     func showQuotaRecovery(accountID: String, windows: [String], style: RecoveryStyle? = nil) {
@@ -372,7 +414,7 @@ final class SidebarSurface: NSView {
     }
     func setAppearance(_ value: SidebarAppearance) {
         guard appearance != value else { return }
-        cancelExpand()
+        cancelExpand(); cancelPanda()
         reminderTask?.cancel(); reminderTask = nil; reminder.hide()
         appearance = value
         configureEmblem(); updateEmblemStatus(); position(); syncReminder()
@@ -383,7 +425,8 @@ final class SidebarSurface: NSView {
         let state = account?.state
         let remaining = state?.stale == true || state?.error != nil ? nil : state?.snapshot?.remaining
         emblem.update(remaining: remaining, scale: panel.backingScaleFactor)
-        surface.setAccessibilityLabel((account?.title ?? L10n.text("额度")) + " · " + (remaining.map { L10n.format("剩余{0}%", String(describing: Int($0.rounded()))) } ?? L10n.text("额度暂不可用")) + L10n.text(" · 移入展开"))
+        surface.setAccessibilityLabel((account?.title ?? L10n.text("额度")) + " · " + (remaining.map { L10n.format("剩余{0}%", String(describing: Int($0.rounded()))) } ?? L10n.text("额度暂不可用")) + L10n.text(isFloatingPanda ? " · 单击互动，双击查看额度" : " · 移入展开"))
+        surface.toolTip = isFloatingPanda ? L10n.text("单击互动，双击查看额度，拖动移动") : nil
     }
     private func layoutEmblem() {
         let tucked = collapsed && docked && appearance.isCharacter
@@ -391,7 +434,7 @@ final class SidebarSurface: NSView {
         let x = tucked ? (right ? surface.bounds.width - 2 * appearance.scale : 2 * appearance.scale) : surface.bounds.midX
         emblem.position = CGPoint(x: x, y: surface.bounds.midY)
     }
-    private func stopEmblemAnimations() { emblem.stopMotion() }
+    private func stopEmblemAnimations() { cancelPanda() }
     var hasEmblemAnimations: Bool { emblem.hasMotion }
     var hasGhostReturnMotion: Bool { emblem.hasReturnMotion }
     private func cancelExpand() { expandWork?.cancel(); expandWork = nil }
@@ -418,10 +461,10 @@ final class SidebarSurface: NSView {
         if duration == 0 { for cell in cells { cell.stopAnimations() }; detailSurface.layer?.removeAllAnimations(); surface.layer?.removeAllAnimations(); surface.stopChromeAnimation(); stopEmblemAnimations() }
         if !panel.isVisible && !values.isEmpty { position(); panel.orderFrontRegardless(); scheduleIdleCollapse() }
         if !selecting, detail.isVisible, let selectedID, values.contains(where: { $0.id == selectedID }) { positionDetail(animated: false) }
-        syncReminder()
+        syncReminder(); schedulePanda()
     }
     func position() {
-        reminder.hide()
+        reminder.hide(); cancelPanda()
         guard !dragging else { return }
         let screen = visibleScreen
         var expanded = expandedFrame(on: screen)
@@ -443,6 +486,7 @@ final class SidebarSurface: NSView {
         document.frame = NSRect(x: 0, y: 0, width: 52, height: CGFloat(cells.count) * 54)
         for (index, cell) in cells.enumerated() { cell.frame.origin = NSPoint(x: 0, y: CGFloat(cells.count - index - 1) * 54) }
         if !cells.isEmpty { document.scroll(NSPoint(x: 0, y: max(0, document.bounds.height - scroll.bounds.height))) }
+        updateEmblemStatus(); schedulePanda()
     }
     func expandedFrame(on screen: NSScreen) -> NSRect {
         if !docked, let anchor = floatingCenter {
@@ -463,13 +507,14 @@ final class SidebarSurface: NSView {
     func enterBar() {
         reminderTask?.cancel()
         reminder.hide()
-        pointerInBar = true; cancelIdle(); cancelExpand()
+        pointerInBar = true; cancelIdle(); cancelExpand(); cancelPanda()
+        if isFloatingPanda { return }
         guard !dragging else { return }
         setCollapsed(false)
     }
     func exitBar() {
         pointerInBar = false
-        scheduleIdleCollapse()
+        scheduleIdleCollapse(); schedulePanda()
     }
     func setCollapsed(_ value: Bool) {
         guard collapsed != value, !dragging, !value || (!pinned && !pointerInBar && !pointerInDetail) else { return }
@@ -632,8 +677,9 @@ final class SidebarSurface: NSView {
     }
     private func drag(_ event: NSEvent) {
         reminderTask?.cancel()
-        reminder.hide()
+        reminder.hide(); cancelPanda()
         guard !dragging else { return }
+        dragClickCount = event.clickCount
         cancelExpand(); cancelIdle(); dismiss(animated: false); dragging = true
         let start = panel.convertPoint(toScreen: event.locationInWindow)
         let before = panel.frame
@@ -653,7 +699,11 @@ final class SidebarSurface: NSView {
     private func finishDrag(moved: Bool) {
         if let dragMonitor { NSEvent.removeMonitor(dragMonitor) }
         dragMonitor = nil; dragging = false
-        guard moved else { setCollapsed(false); scheduleIdleCollapse(); return }
+        guard moved else {
+            if isFloatingPanda { interactWithPanda(clickCount: dragClickCount) }
+            else { setCollapsed(false) }
+            scheduleIdleCollapse(); return
+        }
         let point = NSPoint(x: panel.frame.midX, y: panel.frame.midY)
         let screen = NSScreen.screens.first { $0.frame.contains(NSEvent.mouseLocation) }
             ?? NSScreen.screens.first { $0.frame.contains(point) } ?? visibleScreen
@@ -680,7 +730,7 @@ final class SidebarSurface: NSView {
             d.set(floatingCenter?.x, forKey: "sidebarAnchorX"); d.set(floatingCenter?.y, forKey: "sidebarAnchorY")
         }
     }
-    func showMenu(_ event: NSEvent?, _ view: NSView) { reminderTask?.cancel(); reminder.hide(); cancelExpand(); cancelIdle(); dismiss(animated: false); onMenu?(event, view); scheduleIdleCollapse() }
+    func showMenu(_ event: NSEvent?, _ view: NSView) { cancelPanda(); reminderTask?.cancel(); reminder.hide(); cancelExpand(); cancelIdle(); dismiss(animated: false); onMenu?(event, view); scheduleIdleCollapse(); schedulePanda() }
 }
 
 @MainActor extension AppDelegate {
