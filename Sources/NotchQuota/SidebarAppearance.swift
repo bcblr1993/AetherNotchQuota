@@ -13,6 +13,19 @@ enum SidebarAppearance: String, CaseIterable {
     }
     var isCharacter: Bool { Self.selectable.contains(self) }
     var scale: CGFloat { isCharacter ? 2.25 : 1.5 }
+    var accent: NSColor {
+        switch self {
+        case .panda: return NSColor(srgbRed: 0.39, green: 0.66, blue: 0.47, alpha: 1)
+        case .bunny: return NSColor(srgbRed: 0.89, green: 0.47, blue: 0.62, alpha: 1)
+        case .fox: return NSColor(srgbRed: 0.91, green: 0.54, blue: 0.31, alpha: 1)
+        case .turtle: return NSColor(srgbRed: 0.48, green: 0.65, blue: 0.36, alpha: 1)
+        case .bear: return NSColor(srgbRed: 0.79, green: 0.57, blue: 0.24, alpha: 1)
+        case .cat: return NSColor(srgbRed: 0.90, green: 0.58, blue: 0.47, alpha: 1)
+        case .penguin: return NSColor(srgbRed: 0.35, green: 0.64, blue: 0.81, alpha: 1)
+        case .cloud: return NSColor(srgbRed: 0.46, green: 0.65, blue: 0.85, alpha: 1)
+        default: return NSColor(srgbRed: 0.64, green: 0.53, blue: 0.86, alpha: 1)
+        }
+    }
     var title: String {
         switch self {
         case .capsule: return L10n.text("原生胶囊")
@@ -33,8 +46,9 @@ enum SidebarAppearance: String, CaseIterable {
 
 /// Only the selected design is allocated. Gradients are static layers, not live blur or shaders.
 final class SidebarEmblem: CALayer {
-    private let indicator = CAShapeLayer(), valueLabel = CATextLayer(), eyes = CALayer()
+    private let indicator = CAShapeLayer(), valueLabel = CATextLayer()
     private var leaningBody: CALayer?
+    private let confetti = CALayer()
     private var returnCleanup: DispatchWorkItem?
     private(set) var appearance: SidebarAppearance = .ghost
     override init() { super.init(); bounds = CGRect(x: 0, y: 0, width: 36, height: 36) }
@@ -45,7 +59,7 @@ final class SidebarEmblem: CALayer {
         stopMotion()
         leaningBody = nil
         sublayers?.forEach { $0.removeFromSuperlayer() }
-        eyes.sublayers?.forEach { $0.removeFromSuperlayer() }
+        confetti.sublayers?.forEach { $0.removeFromSuperlayer() }
         appearance = style
         indicator.path = nil; indicator.fillColor = nil; indicator.strokeColor = nil
         indicator.lineWidth = 2; indicator.lineCap = .round; indicator.strokeEnd = 1
@@ -82,12 +96,18 @@ final class SidebarEmblem: CALayer {
             let mark = CAShapeLayer(); mark.path = spark; mark.fillColor = NSColor(white: 0.96, alpha: 1).cgColor
             addSublayer(mark); addSublayer(valueLabel)
         case .ghost, .bunny, .bear, .cloud, .cat, .fox, .panda, .penguin, .turtle:
-            let character = SidebarMascotArtwork.make(style: style, eyes: eyes)
+            let character = SidebarMascotArtwork.make(style: style)
             character.bounds = bounds
             character.anchorPoint = CGPoint(x: 27.0 / 36, y: 13.0 / 36)
             character.position = CGPoint(x: 27, y: 13)
             leaningBody = character
             addSublayer(character)
+            confetti.frame = bounds; confetti.opacity = 0
+            SidebarMascotArtwork.star(at: CGPoint(x: 3, y: 27), radius: 2.1,
+                                     color: NSColor(red: 1, green: 0.83, blue: 0.53, alpha: 1), in: confetti)
+            SidebarMascotArtwork.star(at: CGPoint(x: 32, y: 31), radius: 1.5,
+                                     color: NSColor(red: 0.72, green: 0.93, blue: 0.90, alpha: 1), in: confetti)
+            addSublayer(confetti)
         }
         if !style.isCharacter { addSublayer(indicator) }
     }
@@ -110,13 +130,16 @@ final class SidebarEmblem: CALayer {
     }
     func stopMotion() {
         returnCleanup?.cancel(); returnCleanup = nil
-        removeAllAnimations(); eyes.removeAllAnimations(); leaningBody?.removeAllAnimations()
+        removeAllAnimations(); leaningBody?.removeAllAnimations(); confetti.removeAllAnimations()
     }
-    var hasMotion: Bool { animationKeys()?.isEmpty == false || eyes.animationKeys()?.isEmpty == false || leaningBody?.animationKeys()?.isEmpty == false }
-    var hasReturnMotion: Bool { animation(forKey: "returnHop") != nil && eyes.animation(forKey: "returnBlink") != nil }
+    var hasMotion: Bool { animationKeys()?.isEmpty == false || leaningBody?.animationKeys()?.isEmpty == false || confetti.animationKeys()?.isEmpty == false }
+    var hasReturnMotion: Bool { animation(forKey: "returnHop") != nil && leaningBody?.animation(forKey: "returnGesture") != nil }
     func playReturn() {
         guard appearance.isCharacter else { return }
         returnCleanup?.cancel()
+        let twinkle = CAKeyframeAnimation(keyPath: "opacity")
+        twinkle.values = [0, 0, 1, 0]; twinkle.keyTimes = [0, 0.25, 0.5, 1]; twinkle.duration = 0.44
+        confetti.add(twinkle, forKey: "returnTwinkle")
         // Anticipation, lift, soft landing, then stillness. Each pet has its own gesture.
         let hop = CAKeyframeAnimation(keyPath: "transform.translation.y")
         let floating = appearance == .ghost || appearance == .cloud
@@ -137,35 +160,16 @@ final class SidebarEmblem: CALayer {
             squash.values = appearance == .turtle ? [1, 1, 0.97, 0.99, 1] : [1, 0.94, 1.035, 0.97, 1]; squash.keyTimes = gesture.keyTimes
             squash.duration = 0.44; character.add(squash, forKey: "returnSquash")
         }
-        let blink = CAKeyframeAnimation(keyPath: "transform.scale.y")
-        blink.values = [1, 0.14, 1]
-        blink.keyTimes = [0, 0.42, 1]
-        blink.beginTime = eyes.convertTime(CACurrentMediaTime(), from: nil) + 0.14
-        blink.duration = 0.23
-        eyes.add(blink, forKey: "returnBlink")
         // AppKit may defer retiring animations while a clipped panel changes size.
         // One bounded cleanup prevents old motion from surviving that transition.
         let cleanup = DispatchWorkItem { [weak self] in
             self?.removeAnimation(forKey: "returnHop")
-            self?.eyes.removeAnimation(forKey: "returnBlink")
             self?.leaningBody?.removeAllAnimations()
+            self?.confetti.removeAllAnimations()
             self?.returnCleanup = nil
         }
         returnCleanup = cleanup
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.5, execute: cleanup)
-    }
-    func idle(_ enabled: Bool) {
-        guard enabled else { removeAnimation(forKey: "idleFloat"); eyes.removeAllAnimations(); return }
-        guard animation(forKey: "idleFloat") == nil else { return }
-        let float = CAKeyframeAnimation(keyPath: "transform.translation.y")
-        float.values = [0, 0, appearance.isCharacter ? 1.8 : 0.8, 0, 0]
-        float.keyTimes = [0, 0.70, 0.84, 0.96, 1]; float.duration = 10
-        float.repeatCount = .infinity; float.calculationMode = .cubic; add(float, forKey: "idleFloat")
-        if appearance.isCharacter {
-            let blink = CAKeyframeAnimation(keyPath: "transform.scale.y")
-            blink.values = [1, 1, 0.12, 1, 1]; blink.keyTimes = [0, 0.8, 0.82, 0.85, 1]
-            blink.duration = 7; blink.repeatCount = .infinity; eyes.add(blink, forKey: "blink")
-        }
     }
     func face(right: Bool, docked: Bool, peeking: Bool) {
         // Only edge-docked characters lean; a free-floating character stands upright.

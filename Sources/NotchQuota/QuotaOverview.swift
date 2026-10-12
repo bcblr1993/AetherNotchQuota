@@ -47,6 +47,7 @@ struct OverviewAccount: Identifiable {
     @Published var position = 1
     @Published var total = 1
     @Published var sidebarMode = false
+    @Published var sidebarAppearance: SidebarAppearance = .ghost
     @Published var pinned = false
     var pin: () -> Void = {}
     var next: () -> Void = {}
@@ -132,12 +133,12 @@ struct QuotaOverview: View {
         .frame(width: OverviewLayout.width)
         .background {
             if model.sidebarMode {
-                LinearGradient(colors: [Color(red: 0.085, green: 0.095, blue: 0.13), Color(red: 0.045, green: 0.05, blue: 0.065)], startPoint: .topLeading, endPoint: .bottomTrailing)
+                LinearGradient(colors: [Color(nsColor: model.sidebarAppearance.accent.blended(withFraction: 0.82, of: NSColor(red: 0.075, green: 0.095, blue: 0.14, alpha: 1))!), Color(red: 0.075, green: 0.095, blue: 0.14)], startPoint: .topLeading, endPoint: .bottomTrailing)
             } else { Color(nsColor: .windowBackgroundColor) }
         }
         .overlay {
             if model.sidebarMode {
-                RoundedRectangle(cornerRadius: 16).strokeBorder(Color.white.opacity(0.10), lineWidth: 0.5).allowsHitTesting(false)
+                RoundedRectangle(cornerRadius: 16).strokeBorder(Color(nsColor: model.sidebarAppearance.accent).opacity(0.32), lineWidth: 0.5).allowsHitTesting(false)
             }
         }
     }

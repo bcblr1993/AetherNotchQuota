@@ -154,9 +154,18 @@ extension AppDelegate {
                         // Allow bounded scheduling slack on loaded/high-refresh displays.
                         for _ in 0..<10 where bar.hasEmblemAnimations { await wait(0.1) }
                         check(!bar.hasEmblemAnimations, "character settles without idle animation: " + style.rawValue)
+                        check(bar.cells.allSatisfy { $0.layer?.animationKeys()?.isEmpty != false && $0.artwork.animationKeys()?.isEmpty != false },
+                              "fold stops invisible account animations: " + style.rawValue)
                         bar.showQuotaRecovery(accountID: first, windows: ["每周"], style: .edge)
                         check(bar.reminder.panel.isVisible, "character supports quota recovery reminder: " + style.rawValue)
+                        capture("style-" + style.rawValue + "-recovery", view: bar.reminder.view)
+                        if let account = sidebarAccounts().first {
+                            bar.reminder.showNext(accounts: [account], anchor: bar.panel.frame, screen: screen.visibleFrame, animated: false)
+                            capture("style-" + style.rawValue + "-thought", view: bar.reminder.view)
+                            check(!bar.reminder.view.hasMotion, "nonanimated themed reminder is still: " + style.rawValue)
+                        }
                         bar.reminder.hide()
+                        check(!bar.reminder.view.hasMotion, "hidden reminder cancels child animations: " + style.rawValue)
                     }
                     bar.hide()
                     check(!bar.hasEmblemAnimations, "hidden style stops all motion: " + style.rawValue)
@@ -202,7 +211,7 @@ extension AppDelegate {
                 bar.place(at: NSPoint(x: screen.visibleFrame.midX, y: screen.visibleFrame.midY), screen: screen)
                 bar.enterBar(); await wait(0.4)
                 bar.exitBar(); bar.setCollapsed(true)
-                check(bar.hasGhostReturnMotion, "ghost plays one bounded return hop and blink")
+                check(bar.hasGhostReturnMotion, "ghost plays one bounded return hop and gesture")
                 await wait(0.55)
                 check(!bar.hasEmblemAnimations, "ghost rests without looping animation")
                 bar.exitBar(); bar.setCollapsed(true); await wait(0.4)
@@ -219,6 +228,12 @@ extension AppDelegate {
                 check(screen.visibleFrame.contains(bar.reminder.panel.frame), "thought cloud fits current display")
                 await wait(5.2)
                 check(!bar.reminder.panel.isVisible, "thought cloud disappears after five seconds")
+                bar.reminder.showNext(accounts: reminderAccounts, anchor: bar.panel.frame, screen: screen.visibleFrame, animated: true)
+                bar.reminder.view.leave?(); await wait(0.34)
+                bar.reminder.view.enter?(); await wait(0.3)
+                check(bar.reminder.panel.isVisible && bar.reminder.view.layer?.animation(forKey: "exit") == nil,
+                      "pointer return cancels in-flight reminder dismissal")
+                bar.reminder.hide()
                 if let recoveryAccount = reminderAccounts.first {
                     for (style, name) in [(RecoveryStyle.cloud, "cloud"), (.bounce, "bounce"), (.edge, "edge")] {
                         bar.showQuotaRecovery(accountID: recoveryAccount.id, windows: ["5 小时"], style: style)
