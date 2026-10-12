@@ -59,7 +59,8 @@ enum SidebarLayout {
 final class SidebarCell: NSView {
     let id: String
     let halo = CAGradientLayer()
-    let artwork = CALayer(), ring = CAShapeLayer(), track = CAShapeLayer(), icon = CALayer(), number = CATextLayer()
+    let artwork = CALayer(), icon = CALayer(), number = CATextLayer()
+    private let tile = CAGradientLayer()
     var enter: (() -> Void)?, leave: (() -> Void)?, click: (() -> Void)?
     var drag: ((NSEvent) -> Void)?, context: ((NSEvent, NSView) -> Void)?
     var motion: TimeInterval = 0.2
@@ -71,21 +72,19 @@ final class SidebarCell: NSView {
         self.id = id
         super.init(frame: NSRect(x: 0, y: 0, width: SidebarLayout.width, height: SidebarLayout.rowHeight))
         wantsLayer = true
-        halo.frame = NSRect(x: 5, y: 1, width: 42, height: 52)
-        halo.colors = [NSColor(red: 0.46, green: 0.55, blue: 0.9, alpha: 0.24).cgColor,
-                       NSColor(red: 0.33, green: 0.73, blue: 0.83, alpha: 0.07).cgColor]
+        halo.frame = NSRect(x: 4, y: 0, width: 44, height: 54)
+        halo.colors = [NSColor(red: 0.69, green: 0.59, blue: 1, alpha: 0.30).cgColor,
+                       NSColor(red: 0.44, green: 0.87, blue: 0.84, alpha: 0.12).cgColor]
         halo.startPoint = CGPoint(x: 0, y: 1); halo.endPoint = CGPoint(x: 1, y: 0)
-        halo.cornerRadius = 19; halo.opacity = 0; layer?.addSublayer(halo)
-        artwork.bounds = NSRect(x: 0, y: 0, width: 32, height: 32); artwork.position = NSPoint(x: 26, y: 35)
-        let path = CGMutablePath(); path.addArc(center: CGPoint(x: 16, y: 16), radius: 13.5, startAngle: .pi / 2, endAngle: -.pi * 1.5, clockwise: true)
-        for shape in [track, ring] {
-            shape.frame = artwork.bounds; shape.path = path; shape.fillColor = nil; shape.lineWidth = 2; shape.lineCap = .round
-            artwork.addSublayer(shape)
-        }
-        track.strokeColor = NSColor(white: 1, alpha: 0.13).cgColor
-        ring.strokeEnd = 0
-        icon.frame = NSRect(x: 7, y: 7, width: 18, height: 18); icon.contentsGravity = .resizeAspect
-        icon.cornerRadius = 9; icon.masksToBounds = true; artwork.addSublayer(icon)
+        halo.cornerRadius = 17; halo.cornerCurve = .continuous; halo.opacity = 0; layer?.addSublayer(halo)
+        artwork.bounds = NSRect(x: 0, y: 0, width: 32, height: 32); artwork.position = NSPoint(x: 26, y: 34)
+        tile.frame = artwork.bounds; tile.cornerRadius = 11; tile.cornerCurve = .continuous
+        tile.colors = [NSColor(white: 1, alpha: 0.17).cgColor, NSColor(white: 1, alpha: 0.035).cgColor]
+        tile.startPoint = CGPoint(x: 0, y: 1); tile.endPoint = CGPoint(x: 1, y: 0)
+        tile.borderWidth = 0.5; tile.borderColor = NSColor(white: 1, alpha: 0.18).cgColor
+        artwork.addSublayer(tile)
+        icon.frame = NSRect(x: 4, y: 4, width: 24, height: 24); icon.contentsGravity = .resizeAspect
+        icon.cornerRadius = 7; icon.masksToBounds = true; artwork.addSublayer(icon)
         number.frame = NSRect(x: 0, y: 1, width: 52, height: 15); number.fontSize = 10
         number.font = NSFont.monospacedDigitSystemFont(ofSize: 10, weight: .medium)
         number.alignmentMode = .center; number.foregroundColor = NSColor.white.cgColor
@@ -93,6 +92,12 @@ final class SidebarCell: NSView {
         setAccessibilityElement(true); setAccessibilityRole(.button)
     }
     required init?(coder: NSCoder) { fatalError() }
+    func applyAppearance(_ appearance: SidebarAppearance) {
+        CATransaction.begin(); CATransaction.setDisableActions(true)
+        halo.colors = [appearance.accent.withAlphaComponent(0.32).cgColor,
+                       appearance.accent.withAlphaComponent(0.08).cgColor]
+        CATransaction.commit()
+    }
     override func viewDidChangeBackingProperties() {
         super.viewDidChangeBackingProperties()
         number.contentsScale = window?.backingScaleFactor ?? 2; icon.contentsScale = number.contentsScale
@@ -107,17 +112,9 @@ final class SidebarCell: NSView {
             icon.contents = account.image.cgImage(forProposedRect: nil, context: nil, hints: nil)
         }
         if value != remaining || dimmed != stale || number.string == nil {
-            let previous = ring.presentation()?.strokeEnd ?? ring.strokeEnd
             value = remaining; dimmed = stale
-            ring.strokeEnd = CGFloat(min(100, max(0, remaining ?? 0))) / 100
-            ring.strokeColor = QuotaTint.color(stale ? nil : remaining).cgColor
             number.string = remaining.map { "\(Int($0.rounded()))%" } ?? "—"
-            number.foregroundColor = (stale ? NSColor.gray : NSColor.white).cgColor
-            if duration > 0 {
-                let animation = CABasicAnimation(keyPath: "strokeEnd"); animation.fromValue = previous; animation.toValue = ring.strokeEnd
-                animation.duration = duration; animation.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
-                ring.add(animation, forKey: "quota")
-            } else { ring.removeAllAnimations() }
+            number.foregroundColor = QuotaTint.color(stale ? nil : remaining).cgColor
         }
         CATransaction.commit()
         let label = account.title + (account.subtitle.isEmpty ? "" : " · " + account.subtitle)
@@ -129,7 +126,7 @@ final class SidebarCell: NSView {
         let oldOpacity = halo.presentation()?.opacity ?? halo.opacity
         CATransaction.begin(); CATransaction.setDisableActions(true)
         halo.opacity = enabled ? 1 : 0
-        artwork.transform = CATransform3DMakeScale(enabled ? 1.10 : 1, enabled ? 1.10 : 1, 1)
+        artwork.transform = CATransform3DMakeScale(enabled ? 1.08 : 1, enabled ? 1.08 : 1, 1)
         CATransaction.commit()
         artwork.removeAllAnimations()
         if motion > 0 {
@@ -141,7 +138,7 @@ final class SidebarCell: NSView {
             artwork.add(spring, forKey: "hover")
         }
     }
-    func stopAnimations() { artwork.removeAllAnimations(); ring.removeAllAnimations(); halo.removeAllAnimations(); layer?.removeAllAnimations() }
+    func stopAnimations() { artwork.removeAllAnimations(); halo.removeAllAnimations(); layer?.removeAllAnimations() }
     override func updateTrackingAreas() {
         super.updateTrackingAreas()
         if let tracking { removeTrackingArea(tracking) }
@@ -166,15 +163,19 @@ final class SidebarSurface: NSView {
     private var tracking: NSTrackingArea?
     private let finish = CAGradientLayer()
     var laidOut: (() -> Void)?
-    func applyFinish() {
-        finish.colors = [NSColor(red: 0.11, green: 0.13, blue: 0.19, alpha: 1).cgColor,
-                         NSColor(red: 0.045, green: 0.05, blue: 0.075, alpha: 1).cgColor,
-                         NSColor(red: 0.035, green: 0.07, blue: 0.08, alpha: 1).cgColor]
-        finish.locations = [0, 0.55, 1]
+    func applyFinish(_ appearance: SidebarAppearance = .ghost) {
+        let ink = NSColor(red: 0.10, green: 0.12, blue: 0.19, alpha: 1)
+        CATransaction.begin(); CATransaction.setDisableActions(true)
+        finish.colors = [appearance.accent.blended(withFraction: 0.73, of: ink)!.cgColor,
+                         NSColor(red: 0.10, green: 0.12, blue: 0.19, alpha: 1).cgColor,
+                         appearance.accent.blended(withFraction: 0.84, of: ink)!.cgColor]
+        finish.locations = [0, 0.52, 1]
         finish.startPoint = CGPoint(x: 0, y: 1); finish.endPoint = CGPoint(x: 1, y: 0)
-        layer?.insertSublayer(finish, at: 0)
-        layer?.borderWidth = 0.5
-        layer?.borderColor = NSColor(red: 0.7, green: 0.79, blue: 0.94, alpha: 0.22).cgColor
+        if finish.superlayer == nil { layer?.insertSublayer(finish, at: 0) }
+        layer?.cornerCurve = .continuous
+        layer?.borderWidth = chromeVisible ? 0.5 : 0
+        layer?.borderColor = appearance.accent.blended(withFraction: 0.5, of: .white)!.withAlphaComponent(0.35).cgColor
+        CATransaction.commit()
     }
     private(set) var chromeVisible = true
     func setChromeVisible(_ visible: Bool) {
@@ -363,6 +364,10 @@ final class SidebarSurface: NSView {
     private func configureEmblem() {
         CATransaction.begin(); CATransaction.setDisableActions(true)
         emblem.configure(appearance)
+        reminder.view.companion = appearance
+        model.sidebarAppearance = appearance
+        surface.applyFinish(appearance)
+        cells.forEach { $0.applyAppearance(appearance) }
         CATransaction.commit()
     }
     func setAppearance(_ value: SidebarAppearance) {
@@ -370,7 +375,7 @@ final class SidebarSurface: NSView {
         cancelExpand()
         reminderTask?.cancel(); reminderTask = nil; reminder.hide()
         appearance = value
-        configureEmblem(); updateEmblemStatus(); position(); updateEmblemIdle(); syncReminder()
+        configureEmblem(); updateEmblemStatus(); position(); syncReminder()
         if persist { UserDefaults.standard.set(value.rawValue, forKey: SidebarAppearance.preferenceKey) }
     }
     private func updateEmblemStatus() {
@@ -389,7 +394,6 @@ final class SidebarSurface: NSView {
     private func stopEmblemAnimations() { emblem.stopMotion() }
     var hasEmblemAnimations: Bool { emblem.hasMotion }
     var hasGhostReturnMotion: Bool { emblem.hasReturnMotion }
-    private func updateEmblemIdle() { emblem.idle(false) }
     private func cancelExpand() { expandWork?.cancel(); expandWork = nil }
     func update(_ values: [OverviewAccount], duration: TimeInterval) {
         motion = duration; accounts = values
@@ -400,6 +404,7 @@ final class SidebarSurface: NSView {
             for cell in cells { cell.removeFromSuperview() }
             cells = values.map { account in
                 let cell = SidebarCell(id: account.id)
+                cell.applyAppearance(appearance)
                 cell.enter = { [weak self] in if self?.acceptsInput == true { self?.hover(account.id) } }
                 cell.leave = { [weak self] in if self?.acceptsInput == true { self?.leave(account.id) } }
                 cell.click = { [weak self] in if self?.acceptsInput == true { self?.select(account.id, pin: true) } }
@@ -413,7 +418,7 @@ final class SidebarSurface: NSView {
         if duration == 0 { for cell in cells { cell.stopAnimations() }; detailSurface.layer?.removeAllAnimations(); surface.layer?.removeAllAnimations(); surface.stopChromeAnimation(); stopEmblemAnimations() }
         if !panel.isVisible && !values.isEmpty { position(); panel.orderFrontRegardless(); scheduleIdleCollapse() }
         if !selecting, detail.isVisible, let selectedID, values.contains(where: { $0.id == selectedID }) { positionDetail(animated: false) }
-        updateEmblemIdle(); syncReminder()
+        syncReminder()
     }
     func position() {
         reminder.hide()
@@ -472,9 +477,11 @@ final class SidebarSurface: NSView {
         if value { dismiss(animated: false) }
         let old = panel.frame
         let previousEmblemOpacity = emblem.presentation()?.opacity ?? emblem.opacity
+        // Replace an interrupted gesture, including animations on now-hidden rows.
+        stopEmblemAnimations(); surface.layer?.removeAnimation(forKey: "fold")
+        cells.forEach { $0.stopAnimations() }
         collapsed = value; position()
         let new = panel.frame
-        updateEmblemIdle()
         guard motion > 0, panel.isVisible else { return }
         // Animate window geometry once; no display-link or idle animation loop.
         panel.setFrame(old, display: false)
@@ -486,17 +493,16 @@ final class SidebarSurface: NSView {
         // Never fade dark chrome over the transparent collapsed character.
         // Its corner clipping and window geometry have already changed at this point.
         if !value { surface.animateChrome(from: 0, duration: 0.28) }
-        let spring = CASpringAnimation(keyPath: "transform.scale.y")
-        spring.fromValue = value ? 0.92 : 0.96; spring.toValue = 1; spring.stiffness = 320; spring.damping = 24; spring.duration = 0.36
-        surface.layer?.add(spring, forKey: "fold")
         if !value {
             // A bounded cascade on visible rows only; no timers or continuously animated gradients.
-            for (index, cell) in cells.filter({ $0.frame.intersects(scroll.documentVisibleRect) }).reversed().enumerated() {
+            for (index, cell) in cells.filter({ $0.frame.intersects(scroll.documentVisibleRect) }).enumerated() {
                 let reveal = CAAnimationGroup()
                 let fade = CABasicAnimation(keyPath: "opacity"); fade.fromValue = 0; fade.toValue = 1
-                let rise = CABasicAnimation(keyPath: "transform.translation.y"); rise.fromValue = -4; rise.toValue = 0
-                reveal.animations = [fade, rise]; reveal.duration = 0.22
-                reveal.beginTime = CACurrentMediaTime() + min(Double(index) * 0.018, 0.10)
+                let rise = CABasicAnimation(keyPath: "transform.translation.x"); rise.fromValue = right ? 9 : -9; rise.toValue = 0
+                let pop = CAKeyframeAnimation(keyPath: "transform.scale")
+                pop.values = [0.82, 1.04, 1]; pop.keyTimes = [0, 0.65, 1]
+                reveal.animations = [fade, rise, pop]; reveal.duration = 0.30
+                reveal.beginTime = CACurrentMediaTime() + min(Double(index) * 0.025, 0.10)
                 reveal.fillMode = .backwards
                 reveal.timingFunction = CAMediaTimingFunction(name: .easeOut)
                 cell.layer?.add(reveal, forKey: "unfold")
@@ -657,7 +663,6 @@ final class SidebarSurface: NSView {
     }
     func place(at point: NSPoint, screen: NSScreen, keepCollapsed: Bool = false) {
         cancelExpand(); cancelIdle(); collapsed = keepCollapsed
-        updateEmblemIdle()
         screenID = screen.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? UInt32
         right = point.x >= screen.visibleFrame.midX
         docked = SidebarLayout.shouldDock(center: point, screen: screen.visibleFrame)

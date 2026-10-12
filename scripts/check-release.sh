@@ -15,6 +15,9 @@ if [ -d "$RESOURCE_ROOT/Contents/Resources" ]; then RESOURCE_ROOT="$RESOURCE_ROO
 for LANGUAGE in zh-Hans en ja; do
   [ -f "$RESOURCE_ROOT/$LANGUAGE.lproj/Localizable.strings" ]
 done
+for CHARACTER in panda bunny fox turtle ghost cloud bear cat penguin; do
+  [ -f "$RESOURCE_ROOT/storybook-$CHARACTER.png" ]
+done
 [ -f "$APP/Contents/Resources/Sparkle-LICENSE" ]
 /usr/libexec/PlistBuddy -c 'Print :SUPublicEDKey' "$APP/Contents/Info.plist" >/dev/null
 /usr/libexec/PlistBuddy -c 'Print :SUFeedURL' "$APP/Contents/Info.plist" >/dev/null

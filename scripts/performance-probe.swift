@@ -31,14 +31,22 @@ func usage(_ pid: pid_t) -> rusage_info_v2? {
 guard let pid = requestedPID ?? findPID(), var previous = usage(pid) else { emit(["event": "not_running", "timestamp": Date().timeIntervalSince1970, "version": version]); exit(0) }
 let started = ProcessInfo.processInfo.systemUptime
 var lastTime = started
-emit(["event": "start", "timestamp": Date().timeIntervalSince1970, "pid": pid, "version": version, "interval_s": interval, "duration_s": duration])
+// proc_pid_rusage CPU counters use Mach ticks, which are not nanoseconds on Apple Silicon.
+var timebase = mach_timebase_info_data_t()
+guard mach_timebase_info(&timebase) == KERN_SUCCESS, timebase.denom > 0 else {
+    emit(["event": "timebase_unavailable"]); exit(1)
+}
+let nanosecondsPerTick = Double(timebase.numer) / Double(timebase.denom)
+emit(["event": "start", "timestamp": Date().timeIntervalSince1970, "pid": pid, "version": version, "interval_s": interval, "duration_s": duration,
+      "mach_timebase_numer": timebase.numer, "mach_timebase_denom": timebase.denom])
 while ProcessInfo.processInfo.systemUptime - started < duration {
     Thread.sleep(forTimeInterval: min(interval, max(0.01, duration - (ProcessInfo.processInfo.systemUptime - started))))
     guard let current = usage(pid), current.ri_proc_start_abstime == previous.ri_proc_start_abstime else {
         emit(["event": "process_ended", "timestamp": Date().timeIntervalSince1970, "pid": pid]); break
     }
     let now = ProcessInfo.processInfo.systemUptime, elapsed = now - lastTime
-    let cpu = Double((current.ri_user_time - previous.ri_user_time) + (current.ri_system_time - previous.ri_system_time)) / 1e9 / elapsed * 100
+    let cpuTicks = Double(current.ri_user_time - previous.ri_user_time) + Double(current.ri_system_time - previous.ri_system_time)
+    let cpu = cpuTicks * nanosecondsPerTick / 1e9 / elapsed * 100
     emit(["event": "sample", "timestamp": Date().timeIntervalSince1970, "pid": pid, "version": version,
           "interval_s": elapsed, "cpu_percent_one_core": cpu, "rss_mib": Double(current.ri_resident_size) / 1048576,
           "footprint_mib": Double(current.ri_phys_footprint) / 1048576,

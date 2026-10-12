@@ -1,7 +1,28 @@
 import XCTest
+import AppKit
 @testable import NotchQuota
 
 final class SidebarTests: XCTestCase {
+    func testEveryStorybookAssetIsPackagedTransparentAndDecodedWithinBudget() throws {
+        for style in SidebarAppearance.selectable {
+            let image = try XCTUnwrap(SidebarMascotArtwork.image(for: style), style.rawValue)
+            XCTAssertLessThanOrEqual(image.width, SidebarMascotArtwork.maximumPixelSize)
+            XCTAssertLessThanOrEqual(image.height, SidebarMascotArtwork.maximumPixelSize)
+            XCTAssertTrue([CGImageAlphaInfo.premultipliedLast, .premultipliedFirst, .last, .first].contains(image.alphaInfo))
+            let scene = SidebarMascotArtwork.make(style: style)
+            XCTAssertNotNil(scene.contents)
+            XCTAssertNil(scene.sublayers, "Artwork should use one cached bitmap, not a live layer tree")
+            XCTAssertTrue(image === SidebarMascotArtwork.image(for: style), "Repeated presentation must reuse decoded artwork")
+            var pixels = [UInt8](repeating: 0, count: 4 * image.width * image.height)
+            let context = try XCTUnwrap(CGContext(data: &pixels, width: image.width, height: image.height,
+                bitsPerComponent: 8, bytesPerRow: image.width * 4, space: CGColorSpaceCreateDeviceRGB(),
+                bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue))
+            context.draw(image, in: CGRect(x: 0, y: 0, width: image.width, height: image.height))
+            XCTAssertEqual(pixels[3], 0, "No opaque paper rectangle around the character")
+            let opaque = stride(from: 3, to: pixels.count, by: 4).filter { pixels[$0] > 240 }.count
+            XCTAssertGreaterThan(opaque, image.width * image.height / 5, "Character must be opaque, including cream fur")
+        }
+    }
     func testPopupMenuStaysInsideSourceDisplayAtBothEdges() {
         let size = CGSize(width: 240, height: 320)
         for screen in [CGRect(x: 0, y: 0, width: 1728, height: 1084),
@@ -52,6 +73,18 @@ final class SidebarTests: XCTestCase {
             emblem.stopMotion()
             XCTAssertFalse(emblem.hasMotion)
             XCTAssertTrue(character?.animationKeys()?.isEmpty != false)
+            XCTAssertTrue(emblem.sublayers?.allSatisfy { $0.animationKeys()?.isEmpty != false } == true)
+        }
+    }
+    func testCachedRefreshPreservesReturnGestureAndIdleNeverLoops() {
+        let emblem = SidebarEmblem()
+        for style in SidebarAppearance.selectable {
+            emblem.configure(style)
+            emblem.playReturn()
+            emblem.update(remaining: 42, scale: 2)
+            XCTAssertTrue(emblem.hasReturnMotion)
+            emblem.stopMotion()
+            XCTAssertFalse(emblem.hasMotion)
         }
     }
     func testAppearanceRestoresAndUnknownPreferenceFallsBack() {

@@ -52,7 +52,7 @@ enum ReminderFreshness {
 }
 
 struct ThoughtLayout {
-    static let size = NSSize(width: 292, height: 186)
+    static let size = NSSize(width: 268, height: 166)
     static func frame(anchor: NSRect, screen: NSRect) -> NSRect {
         let above = anchor.maxY + size.height <= screen.maxY - 8
         let x = min(screen.maxX - size.width - 8, max(screen.minX + 8, anchor.midX - size.width / 2))
@@ -61,18 +61,20 @@ struct ThoughtLayout {
     }
 }
 
+/// A small themed note. All artwork is static; only entry/exit uses bounded layer animations.
 final class ThoughtView: NSView {
-    private let cloud = CALayer()
+    private let card = CALayer()
     private var dots: [CALayer] = []
     private var tracking: NSTrackingArea?
+    var companion: SidebarAppearance = .ghost
     var acceptsInput = true
     var enter: (() -> Void)?, leave: (() -> Void)?
     override init(frame: NSRect) {
         super.init(frame: frame); wantsLayer = true
-        layer?.addSublayer(cloud)
-        for diameter: CGFloat in [5, 9, 14] {
+        layer?.addSublayer(card)
+        for diameter: CGFloat in [4, 7, 10] {
             let dot = CALayer(); dot.bounds.size = NSSize(width: diameter, height: diameter)
-            dot.cornerRadius = diameter / 2; dot.backgroundColor = NSColor(white: 0.99, alpha: 0.97).cgColor
+            dot.cornerRadius = diameter / 2
             layer?.addSublayer(dot); dots.append(dot)
         }
     }
@@ -86,152 +88,189 @@ final class ThoughtView: NSView {
     override func mouseEntered(with event: NSEvent) { if acceptsInput { enter?() } }
     override func mouseExited(with event: NSEvent) { if acceptsInput { leave?() } }
     func configure(account: OverviewAccount, anchor: NSRect, windowFrame: NSRect, animated: Bool) {
-        CATransaction.begin(); CATransaction.setDisableActions(true)
-        cloud.sublayers?.forEach { $0.removeFromSuperlayer() }; cloud.removeAllAnimations()
-        let above = windowFrame.midY > anchor.midY
-        cloud.frame = NSRect(x: 8, y: above ? 38 : 8, width: 276, height: 140)
-        let p = CGMutablePath()
-        p.move(to: CGPoint(x: 31, y: 24))
-        p.addCurve(to: CGPoint(x: 23, y: 100), control1: CGPoint(x: -6, y: 26), control2: CGPoint(x: -8, y: 90))
-        p.addCurve(to: CGPoint(x: 99, y: 127), control1: CGPoint(x: 28, y: 137), control2: CGPoint(x: 65, y: 146))
-        p.addCurve(to: CGPoint(x: 181, y: 128), control1: CGPoint(x: 123, y: 146), control2: CGPoint(x: 163, y: 145))
-        p.addCurve(to: CGPoint(x: 246, y: 102), control1: CGPoint(x: 216, y: 145), control2: CGPoint(x: 245, y: 130))
-        p.addCurve(to: CGPoint(x: 248, y: 30), control1: CGPoint(x: 284, y: 88), control2: CGPoint(x: 282, y: 42))
-        p.addCurve(to: CGPoint(x: 181, y: 13), control1: CGPoint(x: 245, y: 1), control2: CGPoint(x: 205, y: -3))
-        p.addCurve(to: CGPoint(x: 98, y: 12), control1: CGPoint(x: 157, y: -5), control2: CGPoint(x: 120, y: -5))
-        p.addCurve(to: CGPoint(x: 31, y: 24), control1: CGPoint(x: 70, y: -4), control2: CGPoint(x: 36, y: 0)); p.closeSubpath()
-        let shape = CAShapeLayer(); shape.path = p
-        shape.fillColor = NSColor(srgbRed: 0.99, green: 0.985, blue: 1, alpha: 0.98).cgColor
-        shape.shadowPath = p; shape.shadowColor = NSColor.black.cgColor; shape.shadowOpacity = 0.12
-        shape.shadowRadius = 7; shape.shadowOffset = CGSize(width: 0, height: -3); cloud.addSublayer(shape)
-        let icon = CALayer(); icon.frame = CGRect(x: 36, y: 96, width: 18, height: 18)
-        icon.contents = account.image; icon.contentsGravity = .resizeAspect; cloud.addSublayer(icon)
-        let ink = NSColor(srgbRed: 0.16, green: 0.16, blue: 0.23, alpha: 1)
-        func text(_ value: String, _ frame: CGRect, size: CGFloat, color: NSColor, bold: Bool = false) {
-            let label = CATextLayer(); label.frame = frame; label.string = value
-            label.font = NSFont.systemFont(ofSize: size, weight: bold ? .semibold : .regular)
-            label.fontSize = size; label.foregroundColor = color.cgColor
-            label.contentsScale = window?.backingScaleFactor ?? 2; label.truncationMode = .middle
-            cloud.addSublayer(label)
-        }
-        text(account.title, CGRect(x: 62, y: 95, width: 180, height: 20), size: 13, color: ink, bold: true)
-        let stale = account.state.stale
-        let quota = account.state.snapshot?.windows.filter { $0.remaining != nil }.min { $0.remaining! < $1.remaining! }
-        let percent = quota?.remaining.map { "\(Int($0.rounded()))%" } ?? "—"
-        text(L10n.text("剩余"), CGRect(x: 36, y: 62, width: 42, height: 25), size: 16, color: ink)
-        text(percent, CGRect(x: 80, y: 60, width: 120, height: 30), size: 24,
-             color: stale ? .secondaryLabelColor : QuotaTint.color(quota?.remaining), bold: true)
-        let reset = quota.map { "\(L10n.quotaLabel($0.label)) · \(QuotaSummary.resetText($0.reset))" } ?? L10n.text("暂时无法读取额度")
-        text(reset, CGRect(x: 36, y: 40, width: 210, height: 17), size: 10, color: ink.withAlphaComponent(0.65))
-        let subtitle = [stale ? L10n.text("上次数据") : "", account.subtitle].filter { !$0.isEmpty }.joined(separator: " · ")
-        text(subtitle, CGRect(x: 36, y: 22, width: 210, height: 15), size: 9, color: ink.withAlphaComponent(0.55))
-        let tip = min(bounds.width - 12, max(12, anchor.midX - windowFrame.minX))
-        for (index, dot) in dots.enumerated() {
-            dot.removeAllAnimations()
-            let step = CGFloat(index)
-            dot.position = CGPoint(x: tip + (bounds.midX - tip) * step * 0.17,
-                                   y: above ? 5 + step * 12 : bounds.height - 5 - step * 12)
-        }
-        CATransaction.commit()
-        setAccessibilityElement(true); setAccessibilityLabel(L10n.format("{0} {1} 剩余 {2}，{3}", String(describing: account.title), String(describing: subtitle), String(describing: percent), String(describing: reset)))
-        guard animated else { return }
-        for (index, part) in (dots + [cloud]).enumerated() {
-            let fade = CABasicAnimation(keyPath: "opacity"); fade.fromValue = 0; fade.toValue = 1
-            fade.duration = 0.22; fade.beginTime = CACurrentMediaTime() + Double(index) * 0.085
-            fade.fillMode = .backwards; part.add(fade, forKey: "appear")
-        }
-        let pop = CASpringAnimation(keyPath: "transform.scale")
-        pop.fromValue = 0.95; pop.toValue = 1; pop.damping = 24; pop.stiffness = 280; pop.duration = 0.4
-        cloud.add(pop, forKey: "pop")
+        configureCard(account: account, announcement: nil, anchor: anchor, windowFrame: windowFrame, animated: animated)
     }
-
     func configureRecovery(account: OverviewAccount, announcement: RecoveryAnnouncement,
                            anchor: NSRect, windowFrame: NSRect, animated: Bool) {
-        configure(account: account, anchor: anchor, windowFrame: windowFrame, animated: false)
-        let thoughtPath = (cloud.sublayers?.first as? CAShapeLayer)?.path
+        configureCard(account: account, announcement: announcement, anchor: anchor, windowFrame: windowFrame, animated: animated)
+    }
+    private func configureCard(account: OverviewAccount, announcement: RecoveryAnnouncement?,
+                               anchor: NSRect, windowFrame: NSRect, animated: Bool) {
+        stopMotion()
         CATransaction.begin(); CATransaction.setDisableActions(true)
-        cloud.sublayers?.forEach { $0.removeFromSuperlayer() }
-        cloud.removeAllAnimations()
-        let compact = announcement.style == .edge
-        cloud.frame = NSRect(x: compact ? 24 : 8,
-                             y: windowFrame.midY > anchor.midY ? 38 : 8,
-                             width: compact ? 244 : 276, height: 140)
-        let path: CGPath
-        if announcement.style == .bounce {
-            path = CGPath(roundedRect: CGRect(x: 4, y: 12, width: 268, height: 116),
-                          cornerWidth: 57, cornerHeight: 57, transform: nil)
-        } else if compact {
-            path = CGPath(roundedRect: CGRect(x: 4, y: 22, width: 236, height: 96),
-                          cornerWidth: 42, cornerHeight: 42, transform: nil)
-        } else { path = thoughtPath ?? CGPath(roundedRect: CGRect(x: 4, y: 12, width: 268, height: 116),
-                                              cornerWidth: 55, cornerHeight: 55, transform: nil) }
-        let shape = CAShapeLayer(); shape.path = path
-        shape.fillColor = NSColor(srgbRed: 0.99, green: 0.985, blue: 1, alpha: 0.98).cgColor
-        shape.shadowPath = path; shape.shadowColor = NSColor.black.cgColor
-        shape.shadowOpacity = 0.12; shape.shadowRadius = 7
-        shape.shadowOffset = CGSize(width: 0, height: -3)
-        cloud.addSublayer(shape)
-        let icon = CALayer(); icon.frame = CGRect(x: compact ? 25 : 35, y: compact ? 86 : 94, width: 18, height: 18)
-        icon.contents = account.image; icon.contentsGravity = .resizeAspect
-        cloud.addSublayer(icon)
-        func label(_ value: String, frame: CGRect, size: CGFloat, color: NSColor, bold: Bool) {
-            let text = CATextLayer(); text.frame = frame; text.string = value
-            text.font = NSFont.systemFont(ofSize: size, weight: bold ? .semibold : .regular)
-            text.fontSize = size; text.foregroundColor = color.cgColor
-            text.contentsScale = window?.backingScaleFactor ?? 2
-            text.truncationMode = .middle
-            cloud.addSublayer(text)
+        card.sublayers?.forEach { $0.removeFromSuperlayer() }
+        let above = windowFrame.midY > anchor.midY
+        card.frame = NSRect(x: 8, y: above ? 26 : 8, width: 252, height: 132)
+        let accent = companion.accent
+        let ink = NSColor(srgbRed: 0.20, green: 0.20, blue: 0.27, alpha: 1)
+        let paper = NSColor(srgbRed: 1, green: 0.985, blue: 0.96, alpha: 1)
+        let fill = CAGradientLayer(); fill.frame = card.bounds
+        fill.colors = [paper.cgColor, accent.blended(withFraction: 0.89, of: paper)!.cgColor]
+        fill.startPoint = CGPoint(x: 0, y: 1); fill.endPoint = CGPoint(x: 1, y: 0)
+        fill.cornerRadius = announcement?.style == .bounce ? 30 : 24; fill.cornerCurve = .continuous
+        fill.borderColor = accent.withAlphaComponent(0.23).cgColor; fill.borderWidth = 0.75
+        // Explicit shadow path avoids dynamic offscreen shape analysis.
+        fill.shadowPath = CGPath(roundedRect: fill.bounds, cornerWidth: fill.cornerRadius, cornerHeight: fill.cornerRadius, transform: nil)
+        fill.shadowColor = accent.blended(withFraction: 0.5, of: ink)!.cgColor
+        fill.shadowOpacity = 0.16; fill.shadowRadius = 5; fill.shadowOffset = CGSize(width: 0, height: -2)
+        card.addSublayer(fill)
+        addMotif(accent)
+        let mascot = SidebarMascotArtwork.make(style: companion)
+        mascot.position = CGPoint(x: 221, y: 107); mascot.setAffineTransform(CGAffineTransform(scaleX: 0.90, y: 0.90))
+        card.addSublayer(mascot)
+        let iconPlate = CALayer(); iconPlate.frame = CGRect(x: 15, y: 91, width: 30, height: 30)
+        iconPlate.backgroundColor = accent.withAlphaComponent(0.10).cgColor; iconPlate.cornerRadius = 10
+        card.addSublayer(iconPlate)
+        let icon = CALayer(); icon.frame = CGRect(x: 19, y: 95, width: 22, height: 22)
+        icon.contents = account.image.cgImage(forProposedRect: nil, context: nil, hints: nil)
+        icon.contentsGravity = .resizeAspect; card.addSublayer(icon)
+        let quota = account.state.snapshot?.windows.filter { $0.remaining != nil }.min { $0.remaining! < $1.remaining! }
+        let stale = account.state.stale || account.state.error != nil
+        let percent = announcement == nil ? (quota?.remaining.map { "\(Int($0.rounded()))%" } ?? "—") : "100%"
+        let subtitle = announcement == nil ? account.subtitle : L10n.text("已恢复至 100%")
+        label(account.title, CGRect(x: 53, y: subtitle.isEmpty ? 98 : 103, width: 141, height: 18), size: 12, color: ink, weight: .semibold)
+        if !subtitle.isEmpty {
+            label(subtitle, CGRect(x: 53, y: 88, width: 143, height: 14), size: 9, color: ink.withAlphaComponent(0.64))
         }
-        let ink = NSColor(srgbRed: 0.16, green: 0.16, blue: 0.23, alpha: 1)
-        let green = NSColor(srgbRed: 0.12, green: 0.52, blue: 0.31, alpha: 1)
-        label(account.title + " · " + announcement.title,
-              frame: CGRect(x: compact ? 50 : 60, y: compact ? 84 : 92,
-                            width: compact ? 161 : 177, height: 18),
-              size: compact ? 10 : 11, color: ink, bold: true)
-        label(announcement.style == .bounce ? L10n.text("100% 恢复啦") : L10n.text("已恢复至 100%"),
-              frame: CGRect(x: compact ? 25 : 35, y: compact ? 49 : 55,
-                            width: compact ? 197 : 210, height: 31),
-              size: compact ? 21 : 24, color: green, bold: true)
-        if !compact {
-            label(L10n.text("新一轮额度已开始"), frame: CGRect(x: 36, y: 36, width: 190, height: 16),
-                  size: 10, color: ink.withAlphaComponent(0.6), bold: false)
+        let tint = announcement != nil ? NSColor(srgbRed: 0.18, green: 0.50, blue: 0.32, alpha: 1) :
+            QuotaTint.color(stale ? nil : quota?.remaining).blended(withFraction: 0.40, of: ink)!
+        label(percent, CGRect(x: 16, y: 38, width: 111, height: 46), size: 35, color: tint, weight: .semibold, rounded: true)
+        label(announcement == nil ? L10n.text("剩余") : L10n.text("额度"), CGRect(x: 132, y: 65, width: 103, height: 16), size: 11, color: ink, weight: .medium)
+        let group = announcement?.title ?? quota.map { L10n.quotaLabel($0.label) } ?? L10n.text("暂时无法读取额度")
+        label(group, CGRect(x: 132, y: 38, width: 103, height: 27), size: 10, color: ink.withAlphaComponent(0.7), wrapped: true)
+        let footer = CALayer(); footer.frame = CGRect(x: 12, y: 10, width: 228, height: 24)
+        footer.cornerRadius = 10; footer.backgroundColor = accent.withAlphaComponent(0.10).cgColor; card.addSublayer(footer)
+        let symbol = CALayer(); symbol.frame = CGRect(x: 21, y: 16, width: 12, height: 12)
+        if let image = NSImage(systemSymbolName: announcement == nil ? "clock" : "checkmark.seal.fill", accessibilityDescription: nil) {
+            let config = NSImage.SymbolConfiguration(paletteColors: [accent.blended(withFraction: 0.25, of: ink)!])
+            symbol.contents = image.withSymbolConfiguration(config)?.cgImage(forProposedRect: nil, context: nil, hints: nil)
         }
-        if announcement.style == .bounce {
-            let ring = CAShapeLayer()
-            ring.path = CGPath(ellipseIn: CGRect(x: 217, y: 45, width: 39, height: 39), transform: nil)
-            ring.fillColor = nil; ring.strokeColor = green.withAlphaComponent(0.64).cgColor
-            ring.lineWidth = 2; ring.strokeEnd = 1; cloud.addSublayer(ring)
-            label("✓", frame: CGRect(x: 228, y: 52, width: 20, height: 24),
-                  size: 20, color: green, bold: true)
-        } else {
-            let starPositions: [(CGFloat, CGFloat)] = [(12, 113), (compact ? 229 : 259, 103)]
-            for (x, y) in starPositions {
-                let star = CAShapeLayer()
-                let p = CGMutablePath(); p.move(to: CGPoint(x: x, y: y + 5))
-                p.addLine(to: CGPoint(x: x + 2, y: y + 2)); p.addLine(to: CGPoint(x: x + 5, y: y))
-                p.addLine(to: CGPoint(x: x + 2, y: y - 2)); p.addLine(to: CGPoint(x: x, y: y - 5))
-                p.addLine(to: CGPoint(x: x - 2, y: y - 2)); p.addLine(to: CGPoint(x: x - 5, y: y))
-                p.addLine(to: CGPoint(x: x - 2, y: y + 2)); p.closeSubpath()
-                star.path = p; star.fillColor = NSColor(srgbRed: 0.92, green: 0.70, blue: 0.28, alpha: 0.9).cgColor
-                cloud.addSublayer(star)
-            }
+        symbol.contentsGravity = .resizeAspect; card.addSublayer(symbol)
+        let reset = announcement == nil ? (quota.map { QuotaSummary.resetText($0.reset) } ?? L10n.text("暂时无法读取额度")) : L10n.text("新一轮额度已开始")
+        label(stale && announcement == nil ? L10n.text("上次数据") + " · " + reset : reset,
+              CGRect(x: 39, y: 15, width: 192, height: 15), size: 10, color: ink.withAlphaComponent(0.74))
+        let tip = min(bounds.width - 12, max(12, anchor.midX - windowFrame.minX))
+        for (index, dot) in dots.enumerated() {
+            let step = CGFloat(index)
+            dot.backgroundColor = accent.blended(withFraction: 0.78, of: paper)!.cgColor
+            dot.position = CGPoint(x: tip + (bounds.midX - tip) * step * 0.17,
+                                   y: above ? 3 + step * 8 : bounds.height - 3 - step * 8)
         }
         CATransaction.commit()
-        setAccessibilityLabel(L10n.format("{0} {1}已恢复至 100%", String(describing: account.title), String(describing: announcement.title)))
-        guard animated else { return }
-        let fade = CABasicAnimation(keyPath: "opacity")
-        fade.fromValue = 0; fade.toValue = 1; fade.duration = 0.24
-        cloud.add(fade, forKey: "recoverAppear")
-        let spring = CASpringAnimation(keyPath: "transform.scale")
-        spring.fromValue = announcement.style == .bounce ? 0.88 : 0.95
-        spring.toValue = 1; spring.stiffness = 280; spring.damping = 23
-        spring.duration = 0.5; cloud.add(spring, forKey: "recoverPop")
-        for (index, dot) in dots.enumerated() {
-            let appear = CABasicAnimation(keyPath: "opacity")
-            appear.fromValue = 0; appear.toValue = 1; appear.duration = 0.2
-            appear.beginTime = CACurrentMediaTime() + Double(index) * 0.08
-            appear.fillMode = .backwards; dot.add(appear, forKey: "recoverDot")
+        setAccessibilityElement(true)
+        setAccessibilityLabel(announcement.map { L10n.format("{0} {1}已恢复至 100%", account.title, $0.title) } ??
+            L10n.format("{0} {1} 剩余 {2}，{3}", account.title, subtitle, percent, group + " · " + reset))
+        if animated { animateEntry(above: above, celebratory: announcement?.style == .bounce) }
+    }
+    private func label(_ value: String, _ frame: CGRect, size: CGFloat, color: NSColor,
+                       weight: NSFont.Weight = .regular, rounded: Bool = false, wrapped: Bool = false) {
+        let text = CATextLayer(); text.frame = frame; text.string = value
+        let font = NSFont.systemFont(ofSize: size, weight: weight)
+        text.font = rounded ? NSFont(descriptor: font.fontDescriptor.withDesign(.rounded) ?? font.fontDescriptor, size: size) : font
+        text.fontSize = size; text.foregroundColor = color.cgColor
+        text.contentsScale = window?.backingScaleFactor ?? 2
+        text.truncationMode = .end; text.isWrapped = wrapped; card.addSublayer(text)
+    }
+    private func addMotif(_ accent: NSColor) {
+        let scene = CALayer(); scene.frame = card.bounds
+        let color = accent.withAlphaComponent(0.12)
+        func shape(_ path: CGPath) {
+            let mark = CAShapeLayer(); mark.path = path; mark.fillColor = color.cgColor; scene.addSublayer(mark)
         }
+        switch companion {
+        case .panda, .bunny:
+            // Bamboo leaves / long rabbit-ear petals.
+            for (x, y) in [(CGFloat(190), CGFloat(77)), (234, 72)] {
+                let leaf = CGMutablePath(); leaf.move(to: CGPoint(x: x, y: y))
+                leaf.addQuadCurve(to: CGPoint(x: x + 8, y: y + 17), control: CGPoint(x: x - 5, y: y + 15))
+                leaf.addQuadCurve(to: CGPoint(x: x, y: y), control: CGPoint(x: x + 15, y: y + 6)); leaf.closeSubpath(); shape(leaf)
+            }
+        case .turtle, .bear:
+            for x: CGFloat in [188, 230] {
+                let hex = CGMutablePath()
+                for i in 0..<6 {
+                    let a = CGFloat(i) * .pi / 3
+                    let point = CGPoint(x: x + cos(a) * 10, y: 77 + sin(a) * 10)
+                    if i == 0 { hex.move(to: point) } else { hex.addLine(to: point) }
+                }
+                hex.closeSubpath(); shape(hex)
+            }
+        case .cat:
+            shape(CGPath(ellipseIn: CGRect(x: 218, y: 70, width: 15, height: 11), transform: nil))
+            for x: CGFloat in [217, 225, 233] { shape(CGPath(ellipseIn: CGRect(x: x, y: 82, width: 5, height: 6), transform: nil)) }
+        case .fox:
+            let leaf = CGMutablePath()
+            leaf.addLines(between: [CGPoint(x: 220, y: 68), CGPoint(x: 210, y: 78), CGPoint(x: 216, y: 79),
+                                   CGPoint(x: 213, y: 86), CGPoint(x: 221, y: 82), CGPoint(x: 225, y: 94),
+                                   CGPoint(x: 230, y: 83), CGPoint(x: 238, y: 88), CGPoint(x: 235, y: 79),
+                                   CGPoint(x: 242, y: 78), CGPoint(x: 230, y: 70)])
+            leaf.closeSubpath(); shape(leaf)
+        case .cloud:
+            for x: CGFloat in [186, 194, 202] { shape(CGPath(ellipseIn: CGRect(x: x, y: x == 194 ? 74 : 70, width: 16, height: 13), transform: nil)) }
+        case .penguin:
+            let snow = CGMutablePath()
+            for i in 0..<3 {
+                let a = CGFloat(i) * .pi / 3
+                snow.move(to: CGPoint(x: 232 - cos(a) * 10, y: 76 - sin(a) * 10))
+                snow.addLine(to: CGPoint(x: 232 + cos(a) * 10, y: 76 + sin(a) * 10))
+            }
+            let line = CAShapeLayer(); line.path = snow; line.strokeColor = color.cgColor; line.lineWidth = 3; line.lineCap = .round; scene.addSublayer(line)
+        default:
+            SidebarMascotArtwork.star(at: CGPoint(x: 191, y: 76), radius: 7, color: color, in: scene)
+            SidebarMascotArtwork.star(at: CGPoint(x: 238, y: 79), radius: 5, color: color, in: scene)
+        }
+        card.addSublayer(scene)
+    }
+    private func animateEntry(above: Bool, celebratory: Bool) {
+        let floating = companion == .ghost || companion == .cloud
+        let gentle = companion == .turtle
+        let duration: Double
+        switch companion {
+        case .panda: duration = 0.38
+        case .bunny: duration = 0.36
+        case .fox: duration = 0.34
+        case .turtle: duration = 0.44
+        case .cloud: duration = 0.50
+        case .bear: duration = 0.40
+        case .cat: duration = 0.32
+        case .penguin: duration = 0.42
+        default: duration = 0.46
+        }
+        for (index, dot) in dots.enumerated() {
+            let fade = CABasicAnimation(keyPath: "opacity"); fade.fromValue = 0; fade.toValue = 1
+            fade.duration = 0.15; fade.beginTime = CACurrentMediaTime() + Double(index) * 0.045
+            fade.fillMode = .backwards; dot.add(fade, forKey: "appear")
+        }
+        let fade = CABasicAnimation(keyPath: "opacity"); fade.fromValue = 0; fade.toValue = 1
+        let rise = CAKeyframeAnimation(keyPath: "transform.translation.y")
+        let distance: Double = companion == .bunny || celebratory ? 12 : (gentle ? 4 : 8)
+        let direction: Double = above ? -1 : 1
+        rise.values = [distance * direction, floating || gentle ? 0 : -2 * direction, 0]; rise.keyTimes = [0, 0.72, 1]
+        let pop = CAKeyframeAnimation(keyPath: "transform.scale")
+        pop.values = [floating || gentle ? 0.97 : 0.91, floating || gentle ? 1 : 1.015, 1]; pop.keyTimes = rise.keyTimes
+        var animations: [CAAnimation] = [fade, rise, pop]
+        if [.fox, .cat, .penguin].contains(companion) {
+            let sway = CAKeyframeAnimation(keyPath: "transform.rotation.z")
+            sway.values = [companion == .penguin ? -0.025 : 0.018, -0.006, 0]; sway.keyTimes = rise.keyTimes
+            animations.append(sway)
+        }
+        let group = CAAnimationGroup(); group.animations = animations; group.duration = duration
+        group.beginTime = CACurrentMediaTime() + 0.08; group.fillMode = .backwards
+        group.timingFunction = CAMediaTimingFunction(name: .easeOut); card.add(group, forKey: "entry")
+    }
+    func animateExit() {
+        stopMotion()
+        let fade = CABasicAnimation(keyPath: "opacity"); fade.fromValue = 1; fade.toValue = 0
+        let scale = CABasicAnimation(keyPath: "transform.scale"); scale.fromValue = 1; scale.toValue = 0.97
+        let group = CAAnimationGroup(); group.animations = [fade, scale]; group.duration = 0.18
+        group.fillMode = .forwards; group.isRemovedOnCompletion = false
+        layer?.add(group, forKey: "exit")
+    }
+    func stopMotion() {
+        layer?.removeAllAnimations(); card.removeAllAnimations(); dots.forEach { $0.removeAllAnimations() }
+    }
+    var hasMotion: Bool {
+        layer?.animationKeys()?.isEmpty == false || card.animationKeys()?.isEmpty == false || dots.contains { $0.animationKeys()?.isEmpty == false }
     }
 }
 
@@ -241,6 +280,7 @@ final class ThoughtView: NSView {
     private(set) var timer: Timer?
     private var dismissal: DispatchWorkItem?
     private var generation = 0
+    private var animatedPresentation = false
     private var cycle = ReminderCycle()
     var tick: (() -> Void)?
     init() {
@@ -249,7 +289,11 @@ final class ThoughtView: NSView {
         panel.level = .floating; panel.hidesOnDeactivate = false; panel.isReleasedWhenClosed = false
         panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .ignoresCycle]
         panel.contentView = view; panel.title = L10n.text("额度思考泡泡")
-        view.enter = { [weak self] in self?.dismissal?.cancel(); self?.dismissal = nil }
+        view.enter = { [weak self] in
+            guard let self else { return }
+            self.generation += 1; self.dismissal?.cancel(); self.dismissal = nil
+            self.view.layer?.removeAnimation(forKey: "exit")
+        }
         view.leave = { [weak self] in self?.dismiss(after: 0.3) }
     }
     func start() {
@@ -263,6 +307,7 @@ final class ThoughtView: NSView {
     func showNext(accounts: [OverviewAccount], anchor: NSRect, screen: NSRect, animated: Bool) {
         guard let id = cycle.next(in: accounts.map(\.id)), let account = accounts.first(where: { $0.id == id }) else { return }
         hide()
+        animatedPresentation = animated
         let frame = ThoughtLayout.frame(anchor: anchor, screen: screen)
         panel.setFrame(frame, display: false)
         view.configure(account: account, anchor: anchor, windowFrame: frame, animated: animated)
@@ -271,6 +316,7 @@ final class ThoughtView: NSView {
     func showRecovery(account: OverviewAccount, windows: [String], style: RecoveryStyle,
                       anchor: NSRect, screen: NSRect, animated: Bool) {
         hide()
+        animatedPresentation = animated
         let frame = ThoughtLayout.frame(anchor: anchor, screen: screen)
         panel.setFrame(frame, display: false)
         view.configureRecovery(account: account,
@@ -280,21 +326,21 @@ final class ThoughtView: NSView {
     }
     func hide() {
         generation += 1; dismissal?.cancel(); dismissal = nil
-        panel.orderOut(nil); panel.alphaValue = 1; view.layer?.removeAllAnimations()
+        panel.orderOut(nil); panel.alphaValue = 1; view.stopMotion()
     }
     private func dismiss(after delay: Double) {
         dismissal?.cancel()
         let token = generation
         let work = DispatchWorkItem { [weak self] in
             guard let self, token == self.generation else { return }
-            let duration = NSWorkspace.shared.accessibilityDisplayShouldReduceMotion ? 0 : 0.22
-            NSAnimationContext.runAnimationGroup { context in
-                context.duration = duration; self.panel.animator().alphaValue = 0
-            } completionHandler: { [weak self] in
-                Task { @MainActor in
-                    guard let self, token == self.generation else { return }; self.hide()
-                }
+            guard self.animatedPresentation, !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion,
+                  !ProcessInfo.processInfo.isLowPowerModeEnabled else { self.hide(); return }
+            self.view.animateExit()
+            let finish = DispatchWorkItem { [weak self] in
+                guard let self, token == self.generation else { return }; self.hide()
             }
+            self.dismissal = finish
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.18, execute: finish)
         }
         dismissal = work; DispatchQueue.main.asyncAfter(deadline: .now() + delay, execute: work)
     }

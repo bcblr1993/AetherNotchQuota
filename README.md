@@ -5,7 +5,7 @@
 
 **AI 额度，一眼就知道。**
 
-AetherNotchQuota 是 Apple Silicon Mac 上的原生 AI 订阅额度助手。把 **Codex、Claude、Antigravity** 的剩余额度和重置时间放在刘海、菜单栏或可拖动侧边栏，按自己的习惯选择账号、调整顺序、换上卡通伙伴。
+AetherNotchQuota 是 Apple Silicon Mac 上的原生 AI 订阅额度助手。把 **Codex、Claude、Antigravity** 的剩余额度和重置时间放在刘海、菜单栏或可拖动侧边栏，按自己的习惯选择账号、调整顺序、换上绘本手绘伙伴。
 
 [官网](https://aethernative.com/apps/notchquota/) · [下载正式版](https://github.com/bcblr1993/AetherNotchQuota/releases/latest) · [使用帮助](https://aethernative.com/apps/notchquota/support/) · [更新记录](CHANGELOG.md) · [反馈问题](https://github.com/bcblr1993/AetherNotchQuota/issues/new/choose)
 
@@ -30,7 +30,7 @@ AetherNotchQuota 是 Apple Silicon Mac 上的原生 AI 订阅额度助手。把 
 
 侧边栏收起后可选择 **小幽灵、奶油小兔、蜂蜜小熊、云朵团子、橘子小猫、枫糖小狐、糯米熊猫、冰蓝企鹅、抹茶小龟**。自由摆放时直立，靠近左右边缘时吸附并倾斜探出；鼠标移入立即展开账号面板。
 
-<img src="docs/images/cartoon-collection.png" width="720" alt="九种可选卡通伙伴的应用实际渲染图" />
+<img src="docs/images/cartoon-collection.png" width="720" alt="九种可选绘本手绘伙伴的应用实际渲染图" />
 
 - **思考泡泡**：空闲时每 10 分钟按顺序尝试提醒一个账号。提醒前先查询，失败、旧数据或未知额度跳过；成功后显示约 5 秒。
 - **额度恢复提醒**：监测到 5 小时或每周额度恢复至 100% 时，随机播放一种短暂庆祝动画。
