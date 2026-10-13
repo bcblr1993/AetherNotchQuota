@@ -42,7 +42,13 @@ final class TurtleAnimation: CALayer {
     private var cleanup: DispatchWorkItem?
     private(set) var scene: TurtleScene?
     var cachedClipCount: Int { clips.count }
-    var decodedBytes: Int { clips.values.flatMap { $0 }.reduce(0) { $0 + $1.bytesPerRow * $1.height } + (resting == nil ? 0 : 256 * 256 * 4) }
+    var decodedBytes: Int {
+        var bytes = resting == nil ? 0 : 256 * 256 * 4
+        for frames in clips.values {
+            for frame in frames { bytes += frame.bytesPerRow * frame.height }
+        }
+        return bytes
+    }
 
     override init() {
         super.init()
