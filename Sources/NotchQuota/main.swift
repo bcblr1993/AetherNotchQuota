@@ -609,6 +609,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             toggleExpanded(); await settle(0.08)
             if motionDuration > 0 { check(panel.frame.height > topHeight && panel.frame.height < topHeight + 112, "expansion intermediate frame") }
             await settle(); rest(); await settle()
+            // WindowServer can finish a native resize late on virtual displays.
+            // Wait for the actual end state with a bounded timeout.
+            for _ in 0..<15 where abs(panel.frame.height - topHeight) >= 1 { await settle(0.1) }
+            if abs(panel.frame.height - topHeight) >= 1 {
+                print("UI collapse diagnostic: height=\(panel.frame.height), expected=\(topHeight), expanded=\(quotaView.expanded), visible=\(panel.isVisible)")
+            }
             check(panel.isVisible && abs(panel.frame.height - topHeight) < 1, "rest collapses without hiding")
             check(abs(panel.frame.maxY - (screen?.frame.maxY ?? 0)) < 1, "top anchor")
             show(); toggleExpanded(); await settle(); toggleExpanded(); await settle(); activity()
