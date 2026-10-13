@@ -63,7 +63,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     var screen: NSScreen?
     var topHeight: CGFloat = 30
     var cameraWidth: CGFloat = 0
-    var demo = CommandLine.arguments.contains("--demo")
+    var demo = CommandLine.arguments.contains("--demo") || CommandLine.arguments.contains("--turtle-demo")
     let animationTestMode = CommandLine.arguments.contains("--animation-test")
     var testMode: Bool { animationTestMode || CommandLine.arguments.contains("--localization-smoke") || CommandLine.arguments.contains("--ui-smoke") || CommandLine.arguments.contains("--sidebar-test") }
     func applicationDidFinishLaunching(_ notification: Notification) {
@@ -133,13 +133,21 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         })
         refreshAll()
         if !demo && !testMode { scanInstances() }
-        if CommandLine.arguments.contains("--localization-smoke") { runLocalizationSmoke() }
+        if CommandLine.arguments.contains("--turtle-demo"), let screen = NSScreen.main {
+            setDisplayMode(.sidebar)
+            sidebar?.setAppearance(.turtle)
+            sidebar?.place(at: CGPoint(x: screen.visibleFrame.midX, y: screen.visibleFrame.midY), screen: screen, keepCollapsed: true)
+            sidebar?.panel.title = "乌龟日常 · 本地体验"
+            sidebar?.exitBar()
+            sidebar?.playTurtle(.walk)
+        }
+        else if CommandLine.arguments.contains("--localization-smoke") { runLocalizationSmoke() }
         else if CommandLine.arguments.contains("--sidebar-test") { runSidebarTest() }
         else if animationTestMode { runAnimationTest() }
         else if testMode { runUISmoke() }
     }
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
-        if CommandLine.arguments.contains(where: { $0.hasPrefix("--soft-panda-") }) { return false }
+        if CommandLine.arguments.contains(where: { $0.hasPrefix("--soft-panda-") || $0 == "--turtle-demo" }) { return false }
         if temporarilyHidden { restoreTemporaryVisibility() }
         else if displayMode == .menuBar { showOverview() }
         else { show() }
@@ -467,6 +475,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 let actionMenu = NSMenuItem(title: L10n.text("陪熊猫玩（拖出侧栏后）"), action: nil, keyEquivalent: "")
                 actionMenu.submenu = actions; settingsMenu.addItem(actionMenu)
             }
+            if sidebar?.appearance == .turtle {
+                let daily = NSMenuItem(title: L10n.text("乌龟自动日常"), action: #selector(toggleTurtleDaily), keyEquivalent: "")
+                daily.target = self; daily.state = sidebar?.turtleRoutine.enabled == true ? .on : .off
+                settingsMenu.addItem(daily)
+                let actions = NSMenu(); actions.autoenablesItems = false
+                for scene in TurtleScene.allCases {
+                    let item = NSMenuItem(title: L10n.text(scene.title), action: #selector(playTurtleScene(_:)), keyEquivalent: "")
+                    item.target = self; item.representedObject = scene.rawValue
+                    item.isEnabled = sidebar?.canPlayTurtle == true; actions.addItem(item)
+                }
+                let item = NSMenuItem(title: L10n.text("乌龟的日常（拖出侧栏后）"), action: nil, keyEquivalent: "")
+                item.submenu = actions; settingsMenu.addItem(item)
+            }
             settingsMenu.addItem(.separator())
         }
         let loginState = demo || testMode ? LoginItemState.disabled : LaunchAtLogin.state
@@ -513,6 +534,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             accountBindings[candidate.rawValue] = nil; excludedProviders.remove(candidate); saveAccountPreferences()
         } else if !excludedProviders.insert(candidate).inserted { excludedProviders.remove(candidate) }
         saveProviderPreferences(); discoverInstalled(); scheduleRotation(); refresh(.standard(candidate))
+    }
+    @objc func toggleTurtleDaily() { sidebar?.toggleTurtleDaily() }
+    @objc func playTurtleScene(_ sender: NSMenuItem) {
+        guard let raw = sender.representedObject as? String, let scene = TurtleScene(rawValue: raw) else { return }
+        sidebar?.playTurtle(scene)
     }
     @objc func togglePandaDaily() { sidebar?.togglePandaDaily() }
     @objc func playPandaScene(_ sender: NSMenuItem) {

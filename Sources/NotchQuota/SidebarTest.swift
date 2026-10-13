@@ -16,6 +16,7 @@ extension AppDelegate {
             }
             setDisplayMode(.sidebar); await wait()
             guard let bar = sidebar else { check(false, "controller created"); exit(1) }
+            if CommandLine.arguments.contains("--turtle-test") { await runTurtleSmoke(bar); return }
             if CommandLine.arguments.contains("--panda-release-test"), let screen = NSScreen.main {
                 @MainActor func capturePanda(_ name: String) {
                     guard let directory = ProcessInfo.processInfo.environment["NOTCHQUOTA_SMOKE_DIR"], let layer = bar.surface.layer else { return }

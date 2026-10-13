@@ -206,3 +206,12 @@
 "戴耳机听音乐" = "Put on headphones";
 " · 单击互动，双击查看额度" = " · Click to play, double-click for quota";
 "单击互动，双击查看额度，拖动移动" = "Click to play, double-click for quota, drag to move";
+
+// Turtle daily activities
+"乌龟自动日常" = "Automatic turtle activities";
+"乌龟的日常（拖出侧栏后）" = "Turtle activities (undock first)";
+"出去散步" = "Go for a walk";
+"回家休息" = "Go home and rest";
+"翻书阅读" = "Read a book";
+"低头喝水" = "Drink water";
+"去河里游泳" = "Go swimming in the river";

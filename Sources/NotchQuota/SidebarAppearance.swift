@@ -12,7 +12,7 @@ enum SidebarAppearance: String, CaseIterable {
         return style
     }
     var isCharacter: Bool { Self.selectable.contains(self) }
-    var scale: CGFloat { self == .panda ? 3.2 : (isCharacter ? 2.25 : 1.5) }
+    var scale: CGFloat { (self == .panda || self == .turtle) ? 3.2 : (isCharacter ? 2.25 : 1.5) }
     var accent: NSColor {
         switch self {
         case .panda: return NSColor(srgbRed: 0.39, green: 0.66, blue: 0.47, alpha: 1)
@@ -99,10 +99,13 @@ final class SidebarEmblem: CALayer {
             let character: CALayer
             if style == .panda {
                 let panda = SoftPandaAnimation(); try? panda.rest(); character = panda
+            } else if style == .turtle {
+                let turtle = TurtleAnimation(); try? turtle.rest(); character = turtle
             } else { character = SidebarMascotArtwork.make(style: style) }
             character.bounds = bounds
             character.anchorPoint = CGPoint(x: 27.0 / 36, y: 13.0 / 36)
             character.position = CGPoint(x: 27, y: 13)
+            if style == .turtle { character.anchorPoint = CGPoint(x: 0.5, y: 0.5); character.position = CGPoint(x: 18, y: 18) }
             leaningBody = character
             addSublayer(character)
             confetti.frame = bounds; confetti.opacity = 0
@@ -134,6 +137,7 @@ final class SidebarEmblem: CALayer {
     func stopMotion() {
         returnCleanup?.cancel(); returnCleanup = nil
         (leaningBody as? SoftPandaAnimation)?.stop()
+        (leaningBody as? TurtleAnimation)?.stop()
         removeAllAnimations(); leaningBody?.removeAllAnimations(); confetti.removeAllAnimations()
     }
     var hasMotion: Bool { animationKeys()?.isEmpty == false || leaningBody?.animationKeys()?.isEmpty == false || confetti.animationKeys()?.isEmpty == false }
@@ -143,6 +147,18 @@ final class SidebarEmblem: CALayer {
         guard let panda = leaningBody as? SoftPandaAnimation else { return false }
         stopMotion()
         return (try? panda.play(scene)) ?? false
+    }
+    var turtleScene: TurtleScene? { (leaningBody as? TurtleAnimation)?.scene }
+    @discardableResult func playTurtle(_ scene: TurtleScene, duration: Double?) -> Bool {
+        guard let turtle = leaningBody as? TurtleAnimation else { return false }
+        stopMotion()
+        return (try? turtle.play(scene, duration: duration)) ?? false
+    }
+    func faceTurtle(right: Bool) {
+        guard appearance == .turtle else { return }
+        CATransaction.begin(); CATransaction.setDisableActions(true)
+        leaningBody?.transform = CATransform3DMakeScale(right ? -1 : 1, 1, 1)
+        CATransaction.commit()
     }
     func playReturn() {
         guard appearance.isCharacter else { return }
