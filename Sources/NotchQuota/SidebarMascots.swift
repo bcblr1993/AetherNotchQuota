@@ -15,10 +15,6 @@ enum SidebarMascotArtwork {
     static func image(for style: SidebarAppearance) -> CGImage? {
         let key = style.rawValue as NSString
         if let image = images.object(forKey: key) { return image }
-        if style == .panda, let image = try? SoftPandaAnimation().frames(for: .drink).first {
-            images.setObject(image, forKey: key, cost: image.bytesPerRow * image.height)
-            return image
-        }
         guard let url = ResourceLocator.icon("storybook-" + style.rawValue),
               let source = CGImageSourceCreateWithURL(url as CFURL, nil),
               let image = CGImageSourceCreateThumbnailAtIndex(source, 0, [
@@ -56,11 +52,8 @@ extension SidebarAppearance {
     private static let menuIcons: [Self: NSImage] = {
         var icons: [Self: NSImage] = [:]
         for style in selectable {
-            guard let context = CGContext(data: nil, width: 48, height: 48, bitsPerComponent: 8, bytesPerRow: 0,
-                                          space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue) else { continue }
-            let emblem = SidebarEmblem(); emblem.configure(style); emblem.update(remaining: 75, scale: 2)
-            context.scaleBy(x: 48 / 36.0, y: 48 / 36.0); emblem.render(in: context)
-            if let image = context.makeImage() { icons[style] = NSImage(cgImage: image, size: NSSize(width: 24, height: 24)) }
+            guard let image = SidebarMascotArtwork.image(for: style) else { continue }
+            icons[style] = NSImage(cgImage: image, size: NSSize(width: 24, height: 24))
         }
         return icons
     }()

@@ -19,11 +19,6 @@ done
 for CHARACTER in panda bunny fox turtle ghost cloud bear cat penguin; do
   [ -f "$RESOURCE_ROOT/storybook-$CHARACTER.png" ]
 done
-[ -f "$RESOURCE_ROOT/soft-panda-drink.png" ]
-[ -f "$RESOURCE_ROOT/soft-panda-music.png" ]
-for SCENE in walk home read drink swim; do
-  [ -f "$RESOURCE_ROOT/turtle-$SCENE.png" ]
-done
 [ -f "$APP/Contents/Resources/Sparkle-LICENSE" ]
 /usr/libexec/PlistBuddy -c 'Print :SUPublicEDKey' "$APP/Contents/Info.plist" >/dev/null
 /usr/libexec/PlistBuddy -c 'Print :SUFeedURL' "$APP/Contents/Info.plist" >/dev/null

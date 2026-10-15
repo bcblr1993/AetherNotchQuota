@@ -32,9 +32,10 @@ enum SidebarLayout {
     static func shouldDock(center: NSPoint, screen: NSRect) -> Bool {
         min(abs(center.x - screen.minX), abs(center.x - screen.maxX)) <= 52
     }
-    static func collapsedFrame(expanded: NSRect, screen: NSRect, docked: Bool, right: Bool, peeking: Bool = false, scale: CGFloat = 1, halfHidden: Bool = false) -> NSRect {
-        let width: CGFloat = (docked && halfHidden ? 22 : 40) * scale
-        let height: CGFloat = 40 * scale
+    static func collapsedFrame(expanded: NSRect, screen: NSRect, docked: Bool, right: Bool, peeking: Bool = false, scale: CGFloat = 1, halfHidden: Bool = false, gesturePadding: CGFloat = 0) -> NSRect {
+        let padding = docked ? 0 : gesturePadding
+        let width: CGFloat = (docked && halfHidden ? 22 : 40) * scale + 2 * padding
+        let height: CGFloat = 40 * scale + 2 * padding
         return NSRect(x: docked ? (right ? screen.maxX - width : screen.minX) : min(screen.maxX - width, max(screen.minX, expanded.midX - width / 2)),
                       y: min(screen.maxY - height, max(screen.minY, expanded.midY - height / 2)), width: width, height: height)
     }
@@ -235,86 +236,37 @@ final class SidebarSurface: NSView {
     private(set) var docked = true
     private(set) var collapsed = false
     private(set) var autoCollapse = true
+    private(set) var companionActivitiesEnabled = true
     private(set) var idleWork: DispatchWorkItem?
     private(set) var expandWork: DispatchWorkItem?
     private var pointerInBar = false, pointerInDetail = false, dragging = false
+    private(set) var interactiveCompanionEnabled = true
+    private var companionInteraction = CompanionInteraction()
+    private var dragStart = NSPoint.zero, dragOrigin = NSPoint.zero
+    private var companionTap = false, carryingCompanion = false
+    private var dragClickCount = 1
+    private var manualCompanionUntil: TimeInterval = 0
     private var dragMonitor: Any?
     private let emblem = SidebarEmblem()
-    private(set) var pandaDailyEnabled = true
-    private var pandaWork: DispatchWorkItem?
-    private var nextPandaScene: SoftPandaScene = .drink
-    private var dragClickCount = 1
-    var pandaScene: SoftPandaScene? { emblem.pandaScene }
-    var hasPandaWork: Bool { pandaWork != nil }
-    var isFloatingPanda: Bool { appearance == .panda && !docked && collapsed }
-    var canPlayPanda: Bool {
-        isFloatingPanda && panel.isVisible && !dragging && !pinned && !detail.isVisible && motion > 0 &&
-        !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion && !ProcessInfo.processInfo.isLowPowerModeEnabled
-    }
-    func cancelPanda() { pandaWork?.cancel(); pandaWork = nil; emblem.stopMotion() }
-    func schedulePanda(after delay: TimeInterval = 35) {
-        guard pandaWork == nil, pandaDailyEnabled, canPlayPanda, !pointerInBar, !pointerInDetail else { return }
-        let work = DispatchWorkItem { [weak self] in
-            guard let self else { return }
-            self.pandaWork = nil
-            guard self.pandaDailyEnabled, self.canPlayPanda, !self.pointerInBar, !self.pointerInDetail else { return }
-            if self.reminder.panel.isVisible || self.reminderTask != nil { self.schedulePanda(); return }
-            self.playPanda(self.nextPandaScene)
-        }
-        pandaWork = work
-        DispatchQueue.main.asyncAfter(deadline: .now() + delay, execute: work)
-    }
-    func playPanda(_ scene: SoftPandaScene) {
-        guard canPlayPanda else { return }
-        cancelPanda(); reminderTask?.cancel(); reminderTask = nil; reminder.hide()
-        if emblem.playPanda(scene) {
-            nextPandaScene = scene == .drink ? .music : .drink
-            schedulePanda(after: scene.duration + 35)
-        }
-    }
-    func interactWithPanda(clickCount: Int) {
-        guard isFloatingPanda else { return }
-        if clickCount > 1 { setCollapsed(false) }
-        else { playPanda(nextPandaScene) }
-    }
-    func togglePandaDaily() {
-        pandaDailyEnabled.toggle(); cancelPanda(); schedulePanda()
-        if persist { UserDefaults.standard.set(pandaDailyEnabled, forKey: "pandaDailyAnimations") }
-    }
-    var isFloatingTurtle: Bool { appearance == .turtle && !docked && collapsed }
-    var canPlayTurtle: Bool {
-        isFloatingTurtle && panel.isVisible && !dragging && !pinned && !detail.isVisible && motion > 0 &&
-        !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion && !ProcessInfo.processInfo.isLowPowerModeEnabled
-    }
-    lazy var turtleRoutine: TurtleRoutine = {
-        let routine = TurtleRoutine(panel: panel)
-        routine.enabled = !persist || (UserDefaults.standard.object(forKey: "turtleDailyActivities") as? Bool ?? true)
-        routine.canPlay = { [weak self] in self?.canPlayTurtle == true }
-        routine.canAutoPlay = { [weak self] in
+    private lazy var companionLife: SidebarCompanionLife = {
+        let life = SidebarCompanionLife(emblem: emblem)
+        life.eligible = { [weak self] in
             guard let self else { return false }
-            return self.canPlayTurtle && !self.pointerInBar && !self.pointerInDetail && !self.reminder.panel.isVisible && self.reminderTask == nil
+            return (self.companionActivitiesEnabled || ProcessInfo.processInfo.systemUptime < self.manualCompanionUntil) && self.appearance.isCharacter && self.collapsed && !self.docked && self.panel.isVisible &&
+                !self.dragging && (!self.pointerInBar || ProcessInfo.processInfo.systemUptime < self.manualCompanionUntil) && !self.pointerInDetail && !self.pinned &&
+                !self.detail.isVisible && !self.reminder.panel.isVisible && self.motion > 0 &&
+                !ProcessInfo.processInfo.isLowPowerModeEnabled
         }
-        routine.screen = { [weak self] in self?.visibleScreen.visibleFrame ?? .zero }
-        routine.playPose = { [weak self] scene, duration in self?.emblem.playTurtle(scene, duration: duration) ?? false }
-        routine.rest = { [weak self] in self?.emblem.stopMotion() }
-        routine.face = { [weak self] right in self?.emblem.faceTurtle(right: right) }
-        return routine
+        life.lively = { [weak self] in self?.interactiveCompanionEnabled == true }
+        life.location = { [weak self] in
+            guard let self else { return (.zero, .zero) }
+            return (self.panel.frame, self.visibleScreen.visibleFrame)
+        }
+        return life
     }()
-    var turtleScene: TurtleScene? { emblem.turtleScene }
-    func toggleTurtleDaily() {
-        turtleRoutine.toggle()
-        if persist { UserDefaults.standard.set(turtleRoutine.enabled, forKey: "turtleDailyActivities") }
-    }
-    func playTurtle(_ scene: TurtleScene) {
-        guard canPlayTurtle else { return }
-        reminderTask?.cancel(); reminderTask = nil; reminder.hide()
-        turtleRoutine.perform(scene)
-    }
-    func interactWithTurtle(clickCount: Int) {
-        guard isFloatingTurtle else { return }
-        if clickCount > 1 { setCollapsed(false) }
-        else { turtleRoutine.interact() }
-    }
+    var hasCompanionWork: Bool { companionLife.hasScheduledWork }
+    var companionActivity: CompanionActivity? { companionLife.activity }
+    var hasCompanionCaption: Bool { companionLife.isCaptionVisible }
     private(set) var appearance: SidebarAppearance = .ghost
     private var screenID: UInt32?
     private var motion: TimeInterval = 0.2
@@ -360,8 +312,9 @@ final class SidebarSurface: NSView {
                 floatingCenter = NSPoint(x: x, y: y)
             }
             autoCollapse = d.object(forKey: "sidebarAutoCollapse") as? Bool ?? true
+            companionActivitiesEnabled = d.object(forKey: "sidebarCompanionActivities") as? Bool ?? true
+            interactiveCompanionEnabled = d.object(forKey: "sidebarInteractiveCompanion") as? Bool ?? true
             appearance = .restored(d.string(forKey: SidebarAppearance.preferenceKey))
-            pandaDailyEnabled = d.object(forKey: "pandaDailyAnimations") as? Bool ?? true
         }
         panel.contentView = surface; surface.layer?.backgroundColor = NSColor(white: 0.035, alpha: 0.97).cgColor
         surface.applyFinish()
@@ -388,6 +341,7 @@ final class SidebarSurface: NSView {
         pointer.fillColor = NSColor(white: 0.045, alpha: 1).cgColor; detailSurface.layer?.addSublayer(pointer)
         surface.drag = { [weak self] event in if self?.acceptsInput == true { self?.drag(event) } }
         surface.context = { [weak self] event, view in if self?.acceptsInput == true { self?.showMenu(event, view) } }
+        reminder.didDismiss = { [weak self] in self?.companionLife.sync() }
         detailSurface.entered = { [weak self] in if self?.acceptsInput == true { self?.pointerInDetail = true; self?.cancelIdle(); self?.cancelClose() } }
         detailSurface.exited = { [weak self] in if self?.acceptsInput == true { self?.pointerInDetail = false; self?.scheduleClose(); self?.scheduleIdleCollapse() } }
     }
@@ -395,12 +349,13 @@ final class SidebarSurface: NSView {
     private var reminderCycle = ReminderCycle()
     var onReminderRefresh: ((String) async -> OverviewAccount?)?
     private var canRemind: Bool {
-        appearance.isCharacter && collapsed && panel.isVisible && !dragging && !pinned && emblem.pandaScene == nil && turtleRoutine.activity == nil &&
+        appearance.isCharacter && collapsed && panel.isVisible && !dragging && !pinned &&
             !pointerInBar && !pointerInDetail && !detail.isVisible
     }
     func showQuotaRecovery(accountID: String, windows: [String], style: RecoveryStyle? = nil) {
         guard canRemind, let account = accounts.first(where: { $0.id == accountID }),
               !windows.isEmpty else { return }
+        companionLife.stop()
         reminderTask?.cancel()
         reminderTask = nil
         let chosen = style ?? RecoveryStyle.allCases.randomElement()!
@@ -425,6 +380,7 @@ final class SidebarSurface: NSView {
                 guard !Task.isCancelled, self.canRemind, let id = self.reminderCycle.next(in: ids) else { return }
                 guard let account = await self.onReminderRefresh?(id) else { continue }
                 guard !Task.isCancelled, self.canRemind, self.accounts.contains(where: { $0.id == id }) else { return }
+                self.companionLife.stop()
                 self.reminder.showNext(accounts: [account], anchor: self.panel.frame,
                     screen: self.visibleScreen.visibleFrame, animated: self.motion > 0)
                 return
@@ -448,10 +404,12 @@ final class SidebarSurface: NSView {
     }
     func setAppearance(_ value: SidebarAppearance) {
         guard appearance != value else { return }
-        cancelExpand(); cancelPanda(); turtleRoutine.cancel()
+        companionLife.stop()
+        cancelExpand()
         reminderTask?.cancel(); reminderTask = nil; reminder.hide()
         appearance = value
         configureEmblem(); updateEmblemStatus(); position(); syncReminder()
+        companionLife.sync()
         if persist { UserDefaults.standard.set(value.rawValue, forKey: SidebarAppearance.preferenceKey) }
     }
     private func updateEmblemStatus() {
@@ -459,8 +417,8 @@ final class SidebarSurface: NSView {
         let state = account?.state
         let remaining = state?.stale == true || state?.error != nil ? nil : state?.snapshot?.remaining
         emblem.update(remaining: remaining, scale: panel.backingScaleFactor)
-        surface.setAccessibilityLabel((account?.title ?? L10n.text("额度")) + " · " + (remaining.map { L10n.format("剩余{0}%", String(describing: Int($0.rounded()))) } ?? L10n.text("额度暂不可用")) + L10n.text((isFloatingPanda || isFloatingTurtle) ? " · 单击互动，双击查看额度" : " · 移入展开"))
-        surface.toolTip = (isFloatingPanda || isFloatingTurtle) ? L10n.text("单击互动，双击查看额度，拖动移动") : nil
+        surface.setAccessibilityLabel((account?.title ?? L10n.text("额度")) + " · " + (remaining.map { L10n.format("剩余{0}%", String(describing: Int($0.rounded()))) } ?? L10n.text("额度暂不可用")) + L10n.text(interactiveCompanionEnabled && !docked ? " · 单击互动，双击查看额度" : " · 移入展开"))
+        surface.toolTip = L10n.text(interactiveCompanionEnabled && !docked ? "单击摸摸小伙伴，双击查看额度，拖动移动" : "移入展开")
     }
     private func layoutEmblem() {
         let tucked = collapsed && docked && appearance.isCharacter
@@ -468,7 +426,7 @@ final class SidebarSurface: NSView {
         let x = tucked ? (right ? surface.bounds.width - 2 * appearance.scale : 2 * appearance.scale) : surface.bounds.midX
         emblem.position = CGPoint(x: x, y: surface.bounds.midY)
     }
-    private func stopEmblemAnimations() { cancelPanda(); turtleRoutine.cancel() }
+    private func stopEmblemAnimations() { emblem.stopMotion() }
     var hasEmblemAnimations: Bool { emblem.hasMotion }
     var hasGhostReturnMotion: Bool { emblem.hasReturnMotion }
     private func cancelExpand() { expandWork?.cancel(); expandWork = nil }
@@ -495,10 +453,11 @@ final class SidebarSurface: NSView {
         if duration == 0 { for cell in cells { cell.stopAnimations() }; detailSurface.layer?.removeAllAnimations(); surface.layer?.removeAllAnimations(); surface.stopChromeAnimation(); stopEmblemAnimations() }
         if !panel.isVisible && !values.isEmpty { position(); panel.orderFrontRegardless(); scheduleIdleCollapse() }
         if !selecting, detail.isVisible, let selectedID, values.contains(where: { $0.id == selectedID }) { positionDetail(animated: false) }
-        syncReminder(); schedulePanda(); turtleRoutine.schedule()
+        syncReminder()
+        companionLife.sync()
     }
     func position() {
-        reminder.hide(); cancelPanda(); turtleRoutine.cancel()
+        reminder.hide()
         guard !dragging else { return }
         let screen = visibleScreen
         var expanded = expandedFrame(on: screen)
@@ -507,8 +466,9 @@ final class SidebarSurface: NSView {
             expanded.origin.x = screen.visibleFrame.minX + anchor.x * screen.visibleFrame.width - expanded.width / 2
             expanded.origin.y = screen.visibleFrame.minY + anchor.y * screen.visibleFrame.height - expanded.height / 2
         }
-        let frame = collapsed ? SidebarLayout.collapsedFrame(expanded: expanded, screen: screen.visibleFrame, docked: docked, right: right, peeking: pointerInBar, scale: appearance.scale, halfHidden: appearance.isCharacter) : expanded
+        let frame = collapsed ? SidebarLayout.collapsedFrame(expanded: expanded, screen: screen.visibleFrame, docked: docked, right: right, peeking: pointerInBar, scale: appearance.scale, halfHidden: appearance.isCharacter, gesturePadding: appearance.isCharacter ? 6.5 * appearance.scale : 0) : expanded
         panel.setFrame(frame, display: true)
+        updateEmblemStatus()
         scroll.isHidden = collapsed
         surface.setChromeVisible(!collapsed)
         surface.layer?.cornerRadius = collapsed ? 0 : 26
@@ -520,8 +480,6 @@ final class SidebarSurface: NSView {
         document.frame = NSRect(x: 0, y: 0, width: 52, height: CGFloat(cells.count) * 54)
         for (index, cell) in cells.enumerated() { cell.frame.origin = NSPoint(x: 0, y: CGFloat(cells.count - index - 1) * 54) }
         if !cells.isEmpty { document.scroll(NSPoint(x: 0, y: max(0, document.bounds.height - scroll.bounds.height))) }
-        updateEmblemStatus(); schedulePanda()
-        if isFloatingTurtle { turtleRoutine.placed(); turtleRoutine.schedule(after: 4) }
     }
     func expandedFrame(on screen: NSScreen) -> NSRect {
         if !docked, let anchor = floatingCenter {
@@ -540,19 +498,27 @@ final class SidebarSurface: NSView {
         idleWork = work; DispatchQueue.main.asyncAfter(deadline: .now() + delay, execute: work)
     }
     func enterBar() {
+        manualCompanionUntil = 0
+        companionLife.stop()
         reminderTask?.cancel()
         reminder.hide()
-        pointerInBar = true; cancelIdle(); cancelExpand(); cancelPanda(); turtleRoutine.cancel()
-        if isFloatingPanda || isFloatingTurtle { return }
+        pointerInBar = true; cancelIdle(); cancelExpand()
         guard !dragging else { return }
+        if interactiveCompanionEnabled && appearance.isCharacter && collapsed && !docked {
+            if canPlayCompanion && companionActivitiesEnabled && companionInteraction.approach(at: ProcessInfo.processInfo.systemUptime) { playCompanion(.greet) }
+            return
+        }
         setCollapsed(false)
     }
     func exitBar() {
         pointerInBar = false
-        scheduleIdleCollapse(); schedulePanda(); turtleRoutine.schedule()
+        scheduleIdleCollapse()
+        companionLife.sync()
     }
     func setCollapsed(_ value: Bool) {
         guard collapsed != value, !dragging, !value || (!pinned && !pointerInBar && !pointerInDetail) else { return }
+        companionLife.stop()
+        defer { companionLife.sync() }
         cancelIdle(); cancelExpand()
         if value { dismiss(animated: false) }
         let old = panel.frame
@@ -599,7 +565,41 @@ final class SidebarSurface: NSView {
         if autoCollapse { scheduleIdleCollapse() } else { setCollapsed(false) }
         if persist { UserDefaults.standard.set(autoCollapse, forKey: "sidebarAutoCollapse") }
     }
-    func screenChanged() { cancelExpand(); cancelIdle(); dismiss(animated: false); position(); scheduleIdleCollapse() }
+    /// Explicit menu interaction can fold a floating pet while the pointer is near it.
+    /// Automatic routines never override hover, pinning, quota detail or motion settings.
+    var canPlayCompanion: Bool {
+        appearance.isCharacter && !docked && panel.isVisible && !dragging && !pinned &&
+            motion > 0 && !ProcessInfo.processInfo.isLowPowerModeEnabled
+    }
+    func playCompanion(_ activity: CompanionActivity) {
+        guard canPlayCompanion else { return }
+        companionLife.stop(); reminderTask?.cancel(); reminder.hide()
+        cancelExpand(); cancelIdle(); dismiss(animated: false)
+        manualCompanionUntil = ProcessInfo.processInfo.systemUptime + activity.duration + 0.25
+        collapsed = true; position()
+        companionLife.perform(activity)
+    }
+    func toggleInteractiveCompanion() {
+        interactiveCompanionEnabled.toggle()
+        companionLife.stop(); manualCompanionUntil = 0
+        if !interactiveCompanionEnabled && pointerInBar { setCollapsed(false) }
+        updateEmblemStatus(); companionLife.sync()
+        if persist { UserDefaults.standard.set(interactiveCompanionEnabled, forKey: "sidebarInteractiveCompanion") }
+    }
+    func interactWithCompanion(clickCount: Int = 1, at time: TimeInterval = ProcessInfo.processInfo.systemUptime) {
+        guard interactiveCompanionEnabled, appearance.isCharacter, !docked, panel.isVisible else { return }
+        if clickCount >= 2 {
+            manualCompanionUntil = 0; companionLife.stop(); setCollapsed(false); scheduleIdleCollapse()
+        } else if canPlayCompanion, let reaction = companionInteraction.tap(appearance, at: time) {
+            playCompanion(reaction)
+        }
+    }
+    func toggleCompanionActivities() {
+        manualCompanionUntil = 0
+        companionActivitiesEnabled.toggle(); companionLife.sync()
+        if persist { UserDefaults.standard.set(companionActivitiesEnabled, forKey: "sidebarCompanionActivities") }
+    }
+    func screenChanged() { companionLife.stop(); cancelExpand(); cancelIdle(); dismiss(animated: false); position(); scheduleIdleCollapse(); companionLife.sync() }
     func hover(_ id: String) {
         guard !dragging else { return }
         cancelIdle(); setCollapsed(false)
@@ -702,6 +702,8 @@ final class SidebarSurface: NSView {
         closeWork = work; DispatchQueue.main.asyncAfter(deadline: .now() + motion, execute: work)
     }
     func hide() {
+        manualCompanionUntil = 0
+        companionLife.stop()
         reminderTask?.cancel()
         reminder.stop()
         if let dragMonitor { NSEvent.removeMonitor(dragMonitor) }
@@ -711,34 +713,47 @@ final class SidebarSurface: NSView {
         pointerInBar = false; pointerInDetail = false; panel.orderOut(nil)
     }
     private func drag(_ event: NSEvent) {
+        companionLife.stop()
         reminderTask?.cancel()
-        reminder.hide(); cancelPanda(); turtleRoutine.cancel()
+        reminder.hide()
         guard !dragging else { return }
-        dragClickCount = event.clickCount
-        cancelExpand(); cancelIdle(); dismiss(animated: false); dragging = true
-        let start = panel.convertPoint(toScreen: event.locationInWindow)
-        let before = panel.frame
-        // Track global pointer deltas directly. Native performDrag on this nonactivating
-        // panel can return without moving, especially after hover changes its geometry.
+        dragStart = panel.convertPoint(toScreen: event.locationInWindow)
+        companionTap = interactiveCompanionEnabled && collapsed && !docked && appearance.isCharacter
+        dragClickCount = event.clickCount; carryingCompanion = false
+        cancelExpand(); cancelIdle(); dismiss(animated: false)
+        // Hover may have expanded the quota strip before mouse-down. Restore the
+        // floating companion while carrying it so pickup feedback is reachable.
+        if canPlayCompanion && companionActivitiesEnabled {
+            collapsed = true; position()
+        }
+        dragging = true
+        dragOrigin = panel.frame.origin
+        // Only a real drag lifts the pet; taps do not flash the pickup animation.
         dragMonitor = NSEvent.addLocalMonitorForEvents(matching: [.leftMouseDragged, .leftMouseUp]) { [weak self] next in
             guard let self else { return next }
             let pointer = NSEvent.mouseLocation
-            self.panel.setFrameOrigin(NSPoint(x: before.minX + pointer.x - start.x,
-                                              y: before.minY + pointer.y - start.y))
-            if next.type == .leftMouseUp {
-                self.finishDrag(moved: hypot(pointer.x - start.x, pointer.y - start.y) > 2)
-            }
+            self.continueDrag(at: pointer)
+            if next.type == .leftMouseUp { self.finishDrag(moved: hypot(pointer.x - self.dragStart.x, pointer.y - self.dragStart.y) > 2) }
             return nil
         }
     }
-    private func finishDrag(moved: Bool) {
+    func continueDrag(at pointer: NSPoint) {
+        guard dragging else { return }
+        let dx = pointer.x - dragStart.x, dy = pointer.y - dragStart.y
+        guard hypot(dx, dy) > 2 || carryingCompanion else { return }
+        panel.setFrameOrigin(NSPoint(x: dragOrigin.x + dx, y: dragOrigin.y + dy))
+        if !carryingCompanion {
+            carryingCompanion = true
+            if collapsed && !docked && companionActivitiesEnabled && motion > 0 && !ProcessInfo.processInfo.isLowPowerModeEnabled { emblem.playActivity(.pickup) }
+        }
+    }
+    func finishDrag(moved: Bool) {
         if let dragMonitor { NSEvent.removeMonitor(dragMonitor) }
         dragMonitor = nil; dragging = false
-        guard moved else {
-            if isFloatingPanda { interactWithPanda(clickCount: dragClickCount) }
-            else if isFloatingTurtle { interactWithTurtle(clickCount: dragClickCount) }
-            else { setCollapsed(false) }
-            scheduleIdleCollapse(); return
+        guard moved || carryingCompanion else {
+            if companionTap { interactWithCompanion(clickCount: dragClickCount) }
+            else { setCollapsed(false); scheduleIdleCollapse() }
+            return
         }
         let point = NSPoint(x: panel.frame.midX, y: panel.frame.midY)
         let screen = NSScreen.screens.first { $0.frame.contains(NSEvent.mouseLocation) }
@@ -746,8 +761,12 @@ final class SidebarSurface: NSView {
         place(at: point, screen: screen, keepCollapsed: collapsed)
         pointerInBar = panel.frame.contains(NSEvent.mouseLocation)
         scheduleIdleCollapse()
+        if collapsed && !docked && companionActivitiesEnabled && motion > 0 && !ProcessInfo.processInfo.isLowPowerModeEnabled { emblem.playActivity(.land) }
+        companionLife.sync()
     }
     func place(at point: NSPoint, screen: NSScreen, keepCollapsed: Bool = false) {
+        companionLife.stop()
+        defer { companionLife.sync() }
         cancelExpand(); cancelIdle(); collapsed = keepCollapsed
         screenID = screen.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? UInt32
         right = point.x >= screen.visibleFrame.midX
@@ -766,7 +785,7 @@ final class SidebarSurface: NSView {
             d.set(floatingCenter?.x, forKey: "sidebarAnchorX"); d.set(floatingCenter?.y, forKey: "sidebarAnchorY")
         }
     }
-    func showMenu(_ event: NSEvent?, _ view: NSView) { cancelPanda(); turtleRoutine.cancel(); reminderTask?.cancel(); reminder.hide(); cancelExpand(); cancelIdle(); dismiss(animated: false); onMenu?(event, view); scheduleIdleCollapse(); schedulePanda(); turtleRoutine.schedule() }
+    func showMenu(_ event: NSEvent?, _ view: NSView) { companionLife.stop(); reminderTask?.cancel(); reminder.hide(); cancelExpand(); cancelIdle(); dismiss(animated: false); onMenu?(event, view); scheduleIdleCollapse(); companionLife.sync() }
 }
 
 @MainActor extension AppDelegate {

@@ -7,6 +7,7 @@ VERSION="$(tr -d '\n' < VERSION)"
 APP="$ROOT/build/AetherNotchQuota.app"
 swift build -c release --triple arm64-apple-macosx13.0
 BIN_DIR="$(swift build -c release --triple arm64-apple-macosx13.0 --show-bin-path)"
+rm -rf "$APP"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
 cp "$BIN_DIR/NotchQuota" "$APP/Contents/MacOS/NotchQuota"
 cp Packaging/Info.plist "$APP/Contents/Info.plist"

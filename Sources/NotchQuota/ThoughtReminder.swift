@@ -283,6 +283,7 @@ final class ThoughtView: NSView {
     private var animatedPresentation = false
     private var cycle = ReminderCycle()
     var tick: (() -> Void)?
+    var didDismiss: (() -> Void)?
     init() {
         panel = NSPanel(contentRect: view.frame, styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: false)
         panel.backgroundColor = .clear; panel.isOpaque = false; panel.hasShadow = false
@@ -334,10 +335,10 @@ final class ThoughtView: NSView {
         let work = DispatchWorkItem { [weak self] in
             guard let self, token == self.generation else { return }
             guard self.animatedPresentation, !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion,
-                  !ProcessInfo.processInfo.isLowPowerModeEnabled else { self.hide(); return }
+                  !ProcessInfo.processInfo.isLowPowerModeEnabled else { self.hide(); self.didDismiss?(); return }
             self.view.animateExit()
             let finish = DispatchWorkItem { [weak self] in
-                guard let self, token == self.generation else { return }; self.hide()
+                guard let self, token == self.generation else { return }; self.hide(); self.didDismiss?()
             }
             self.dismissal = finish
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.18, execute: finish)

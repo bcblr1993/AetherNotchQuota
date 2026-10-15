@@ -3,6 +3,7 @@ import AppKit
 extension AppDelegate {
     func runSidebarTest() {
         Task { @MainActor in
+            if CommandLine.arguments.contains("--companion-preview") { await CompanionPreview.run(); return }
             var failures = 0
             func check(_ value: Bool, _ label: String) {
                 print("SIDEBAR \(label): \(value ? "PASS" : "FAIL")"); fflush(stdout); if !value { failures += 1 }
@@ -16,52 +17,24 @@ extension AppDelegate {
             }
             setDisplayMode(.sidebar); await wait()
             guard let bar = sidebar else { check(false, "controller created"); exit(1) }
-            if CommandLine.arguments.contains("--turtle-test") { await runTurtleSmoke(bar); return }
-            if CommandLine.arguments.contains("--panda-release-test"), let screen = NSScreen.main {
-                @MainActor func capturePanda(_ name: String) {
-                    guard let directory = ProcessInfo.processInfo.environment["NOTCHQUOTA_SMOKE_DIR"], let layer = bar.surface.layer else { return }
-                    let size = bar.surface.bounds.size
-                    guard let context = CGContext(data: nil, width: Int(size.width * 2), height: Int(size.height * 2), bitsPerComponent: 8, bytesPerRow: 0, space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue) else { return }
-                    context.scaleBy(x: 2, y: 2); (layer.presentation() ?? layer).render(in: context)
-                    if let image = context.makeImage() {
-                        try? NSBitmapImageRep(cgImage: image).representation(using: .png, properties: [:])?.write(to: URL(fileURLWithPath: directory).appendingPathComponent(name + ".png"))
-                    }
-                }
-                let requests = lastAttempt
+            bar.toggleInteractiveCompanion() // Existing quota contracts and baseline performance use hover expansion.
+            if CommandLine.arguments.contains("--companion-benchmark"), let screen = NSScreen.main {
                 bar.setAppearance(.panda)
-                bar.place(at: NSPoint(x: screen.visibleFrame.midX, y: screen.visibleFrame.midY), screen: screen, keepCollapsed: true)
-                bar.exitBar(); await wait(0.6)
-                check(bar.isFloatingPanda && bar.canPlayPanda && bar.hasPandaWork, "C panda floats and schedules one daily action")
-                bar.togglePandaDaily()
-                check(!bar.hasPandaWork, "daily off cancels scheduled work")
-                bar.enterBar()
-                check(bar.collapsed, "hover keeps floating panda interactive")
-                bar.interactWithPanda(clickCount: 1)
-                check(bar.pandaScene == .drink, "single click starts drink with daily off")
-                updateSidebar()
-                check(bar.pandaScene == .drink && bar.collapsed, "cached refresh preserves current scene and collapse")
-                await wait(1.5); capturePanda("panda-drink")
-                bar.interactWithPanda(clickCount: 1)
-                check(bar.pandaScene == .music, "next single click replaces drink with music")
-                await wait(1.6); capturePanda("panda-music")
-                bar.interactWithPanda(clickCount: 2)
-                check(!bar.collapsed && bar.pandaScene == nil, "double click opens quota and stops animation")
-                bar.exitBar(); bar.setCollapsed(true); await wait(0.6)
-                suppressMotion = true; updateSidebar(); bar.playPanda(.drink)
-                check(bar.pandaScene == nil && !bar.hasPandaWork, "reduced motion blocks manual and daily playback")
-                suppressMotion = false; updateSidebar(); bar.togglePandaDaily()
-                bar.cancelPanda(); bar.schedulePanda(after: 0.1); await wait(0.3)
-                check(bar.pandaScene != nil && bar.hasPandaWork, "automatic action plays and schedules a quiet gap")
-                bar.hide()
-                check(bar.pandaScene == nil && !bar.hasPandaWork && !bar.hasEmblemAnimations, "hide clears scene and timer")
-                updateSidebar(); bar.setAppearance(.bunny)
-                check(bar.pandaScene == nil && !bar.hasPandaWork, "other characters retain their existing artwork without panda work")
-                check(lastAttempt == requests, "all pet interactions are quota-cache-only")
-                bar.hide()
-                print("PANDA RELEASE COMPLETE: \(failures == 0 ? "PASS" : "FAIL")"); fflush(stdout)
+                bar.place(at: NSPoint(x: screen.visibleFrame.midX, y: screen.visibleFrame.midY), screen: screen)
+                bar.exitBar(); bar.setCollapsed(true)
+                print("COMPANION BENCH ready \(Date().timeIntervalSince1970)"); fflush(stdout)
+                await wait(2.5)
+                check(bar.companionActivity == .snack, "benchmark observes actual floating snack")
+                await wait(9.5)
+                check(!bar.hasEmblemAnimations && bar.hasCompanionWork, "benchmark resting pet has no rendering animation")
+                print("COMPANION BENCH idle \(Date().timeIntervalSince1970)"); fflush(stdout)
+                await wait(20)
+                bar.hide(); check(!bar.hasCompanionWork, "benchmark cleanup cancels timer")
+                print("COMPANION BENCH COMPLETE: \(failures == 0 ? "PASS" : "FAIL")"); fflush(stdout)
                 exit(failures == 0 ? 0 : 1)
             }
-
+            // Existing layout checks exercise quiet mode; autonomous life is checked separately below.
+            bar.toggleCompanionActivities()
             check(bar.panel.isVisible && !panel.isVisible && quotaStatusItem == nil, "third mode owns only sidebar")
             check(bar.cells.count == visibleTargets.count && rotationTimer == nil, "selected accounts stay fixed without rotation timer")
             let requests = lastAttempt
@@ -310,6 +283,78 @@ extension AppDelegate {
             check(!bar.panel.isVisible && !bar.detail.isVisible && quotaStatusItem != nil, "switching to menu mode removes sidebar")
             setDisplayMode(.island); await wait()
             check(panel.isVisible && !bar.panel.isVisible && quotaStatusItem == nil, "switching to island restores original UI")
+            if let screen = NSScreen.main {
+                setDisplayMode(.sidebar); await wait()
+                bar.hide(); updateSidebar(); bar.setAppearance(.panda)
+                bar.place(at: NSPoint(x: screen.visibleFrame.midX, y: screen.visibleFrame.midY), screen: screen)
+                bar.exitBar(); bar.setCollapsed(true); await wait(0.6)
+                check(!bar.hasCompanionWork && !bar.hasEmblemAnimations, "quiet preference disables daily life")
+                bar.toggleCompanionActivities(); await wait(2.4)
+                check(bar.companionActivity == .snack && bar.hasEmblemAnimations && bar.hasCompanionCaption, "floating pet begins its own snack routine and caption")
+                capture("daily-panda-on-desktop", view: bar.surface)
+                bar.enterBar()
+                check(!bar.hasCompanionWork && bar.companionActivity == nil && !bar.hasCompanionCaption, "hover immediately cancels daily routine and caption")
+                bar.exitBar(); bar.setCollapsed(true)
+                check(bar.hasCompanionWork, "leaving a floating pet schedules a single routine")
+                suppressMotion = true; updateSidebar()
+                check(!bar.hasCompanionWork && !bar.hasEmblemAnimations, "reduced motion cancels scheduled and active routines")
+                suppressMotion = false; updateSidebar(); await wait(0.3)
+                check(bar.hasCompanionWork && bar.companionActivity == nil, "motion availability resumes quiet interval without replaying an interrupted routine")
+                bar.playCompanion(.music)
+                check(bar.collapsed && bar.companionActivity == .music && bar.hasCompanionCaption, "explicit companion menu plays a continuous scene")
+                bar.playCompanion(.read)
+                check(bar.companionActivity == .read && bar.hasEmblemAnimations, "manual scenes replace one another without stacking")
+                bar.enterBar(); bar.exitBar(); bar.setCollapsed(true)
+                bar.showQuotaRecovery(accountID: first, windows: ["每周"], style: .edge)
+                check(!bar.hasCompanionWork && bar.companionActivity == nil, "quota reminder takes priority over companion chatter")
+                bar.reminder.hide()
+                bar.place(at: NSPoint(x: screen.visibleFrame.maxX - 10, y: screen.visibleFrame.midY), screen: screen, keepCollapsed: true)
+                check(!bar.hasCompanionWork, "edge-docked pets stay quiet")
+                bar.place(at: NSPoint(x: screen.visibleFrame.midX, y: screen.visibleFrame.midY), screen: screen, keepCollapsed: true)
+                bar.setCollapsed(false)
+                if let pickup = NSEvent.mouseEvent(with: .leftMouseDown, location: NSPoint(x: bar.panel.frame.width / 2, y: bar.panel.frame.height / 2), modifierFlags: [], timestamp: ProcessInfo.processInfo.systemUptime, windowNumber: bar.panel.windowNumber, context: nil, eventNumber: 1, clickCount: 1, pressure: 1) {
+                    let startPoint = bar.panel.convertPoint(toScreen: pickup.locationInWindow)
+                    let acceptedInput = bar.acceptsInput
+                    bar.acceptsInput = true
+                    bar.surface.mouseDown(with: pickup)
+                    bar.continueDrag(at: NSPoint(x: startPoint.x + 12, y: startPoint.y + 8))
+                    bar.acceptsInput = acceptedInput
+                    check(bar.collapsed && bar.hasEmblemAnimations, "dragging an expanded floating strip restores the pet and pickup gesture")
+                    bar.continueDrag(at: startPoint)
+                    bar.finishDrag(moved: false)
+                    check(bar.collapsed && bar.hasEmblemAnimations, "dragging back to the start still lands instead of becoming a click")
+                } else { check(false, "synthetic pickup event is available") }
+                bar.hide()
+                check(!bar.hasCompanionWork && !bar.hasEmblemAnimations && !bar.hasCompanionCaption, "hidden pet retains no routine timers, captions or motion")
+                check(lastAttempt == requests, "daily routines never request account data")
+                updateSidebar()
+                bar.place(at: NSPoint(x: screen.visibleFrame.midX, y: screen.visibleFrame.midY), screen: screen, keepCollapsed: true)
+                bar.toggleInteractiveCompanion()
+                bar.enterBar()
+                check(bar.collapsed && bar.companionActivity == .greet, "playful hover greets without replacing pet with quota rows")
+                bar.interactWithCompanion(at: 100)
+                check(bar.collapsed && bar.companionActivity == .pet, "single click pets the companion")
+                bar.interactWithCompanion(at: 100.1)
+                check(bar.companionActivity == .pet, "rapid clicks do not restart or stack reactions")
+                bar.interactWithCompanion(at: 101)
+                check(bar.companionActivity == .greet, "repeated deliberate clicks use character-specific reactions")
+                capture("playful-panda-petting", view: bar.surface)
+                bar.interactWithCompanion(clickCount: 2)
+                check(!bar.collapsed && bar.companionActivity == nil && !bar.hasCompanionCaption, "double click opens quota and cancels interaction")
+                bar.exitBar(); bar.setCollapsed(true)
+                suppressMotion = true; updateSidebar()
+                bar.interactWithCompanion(at: 102)
+                check(!bar.hasEmblemAnimations && !bar.hasCompanionWork, "playful interaction honors reduced motion")
+                bar.interactWithCompanion(clickCount: 2)
+                check(!bar.collapsed, "quota remains accessible with reduced motion")
+                suppressMotion = false; updateSidebar()
+                bar.exitBar(); bar.setCollapsed(true); bar.enterBar()
+                check(bar.collapsed && bar.companionActivity == nil, "repeated hover is throttled instead of replaying a greeting")
+                bar.toggleInteractiveCompanion()
+                check(!bar.collapsed, "disabling playful mode restores hover expansion")
+                bar.hide()
+                bar.toggleCompanionActivities(); updateSidebar()
+            }
             if CommandLine.arguments.contains("--benchmark") {
                 instances = (1...4).map { AntigravityInstance(appPath: "/Fixtures/Extra\($0).app", credentialPath: "/Fixtures/extra\($0).json", name: "Antigravity \($0)") }
                 enabledInstances = Set(instances.map(\.id))
