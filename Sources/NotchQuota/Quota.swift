@@ -108,4 +108,44 @@ enum QuotaParser {
         }
         return Snapshot(windows: rows)
     }
+
+    static func hasGeminiQuota(_ snapshot: Snapshot) -> Bool {
+        snapshot.windows.contains { $0.label.lowercased().hasPrefix("gemini") }
+    }
+
+    /// Newer builds expose Gemini through model tiers, outside the third-party quota summary.
+    /// Only selectable agent models belong here; tab completion and retired aliases do not.
+    static func antigravityGeminiModels(_ data: [String: Any]) -> [QuotaWindow] {
+        let response = data["response"] as? [String: Any] ?? data
+        let models = response["models"] as? [String: [String: Any]] ?? [:]
+        var ids = Set<String>()
+        if let tiers = response["tieredModelIds"] as? [String: [String]] {
+            for values in tiers.values { ids.formUnion(values) }
+        }
+        if let sorts = response["agentModelSorts"] as? [[String: Any]] {
+            for sort in sorts {
+                for group in sort["groups"] as? [[String: Any]] ?? [] {
+                    ids.formUnion(group["modelIds"] as? [String] ?? [])
+                }
+            }
+        }
+        if let defaultID = response["defaultAgentModelId"] as? String { ids.insert(defaultID) }
+        // Older model responses have no selection metadata.
+        if response["tieredModelIds"] == nil && response["agentModelSorts"] == nil {
+            ids.formUnion(models.keys)
+        }
+        var rows: [QuotaWindow] = []
+        for id in ids.sorted() where id.lowercased().hasPrefix("gemini-") {
+            guard let model = models[id], model["isInternal"] as? Bool != true else { continue }
+            let quota = model["quotaInfo"] as? [String: Any] ?? [:]
+            let displayName = (model["displayName"] as? String)?.trimmingCharacters(in: .whitespacesAndNewlines)
+            // Tiered models currently omit displayName. Derive a readable name without pinning a version.
+            let fallback = id.split(separator: "-").filter { $0 != "tiered" }.map { $0.capitalized }.joined(separator: " ")
+            let name = displayName.flatMap { $0.isEmpty ? nil : $0 } ?? fallback
+            rows.append(.init(id: "gemini-model-" + id, label: name,
+                              remaining: percent(quota["remainingFraction"], fraction: true),
+                              reset: date(quota["resetTime"])))
+        }
+        return rows
+    }
 }

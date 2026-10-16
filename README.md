@@ -11,6 +11,10 @@ AetherNotchQuota 是 Apple Silicon Mac 上的原生 AI 订阅额度助手。把 
 
 [官网](https://aethernative.com/apps/notchquota/) · [下载正式版](https://github.com/bcblr1993/AetherNotchQuota/releases/latest) · [使用帮助](https://aethernative.com/apps/notchquota/support/) · [更新记录](CHANGELOG.md) · [反馈问题](https://github.com/bcblr1993/AetherNotchQuota/issues/new/choose)
 
+## 0.1.29 · Gemini 额度兼容修复
+
+适配新版 Antigravity：恢复 Gemini 3.8 Flash 等当前可用模型的额度与重置时间，同时保留 Claude / GPT 的周期额度。模型名称跟随服务返回，重复档位和后台模型不会挤占详情。
+
 ## 选一种适合你的显示方式
 
 | 模式 | 日常使用 |
