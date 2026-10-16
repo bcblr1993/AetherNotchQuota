@@ -1,14 +1,13 @@
-# AetherNotchQuota 0.1.29 · 恢复 Antigravity Gemini 额度
+# AetherNotchQuota 0.1.30 · 修正 Gemini 模型显示
 
-修复新版 Antigravity 额度详情只显示 Claude / GPT、没有 Gemini 自身额度的问题。
+修正 0.1.29 把接口中的后台 flashLite 档位误当成可选主模型、额外显示 Gemini 3.5 Flash Lite 的问题。
 
-- 补充读取当前可用 Gemini 模型，包括 Gemini 3.8 Flash 的剩余比例和重置时间。
-- 同一模型的多个档位去重，过滤后台模型与未列入当前选择列表的旧别名。
-- 保留 Claude / GPT 周期额度、旧版 Gemini 分组兼容和账号隔离；查询失败保留旧数据并显示错误。
-- 沿用现有刷新频率、界面和小伙伴动效。
+- 保留 Gemini 3.8 Flash 的剩余额度与重置时间，以及 Claude / GPT 的周期额度。
+- 按档位用途过滤后台模型，不硬编码屏蔽特定版本；Lite 模型若明确出现在可选菜单或默认选择中，仍可正常显示。
+- 补充隐藏档位、明确可选 Lite 模型和完整额度读取回归测试。
 
 支持 Apple Silicon、macOS 13 及以上。通过应用内“检查更新”升级，或下载安装 DMG。
 
 <!-- aethernative
-{"summary":{"zh":"修复新版 Antigravity 遗漏 Gemini 额度的问题，恢复 Gemini 3.8 Flash 等可用模型的剩余比例与重置时间。","en":"Restore missing Gemini quotas in newer Antigravity builds, including Gemini 3.8 Flash and its reset time."},"notes":[{"title":{"zh":"Gemini 额度修复","en":"Gemini quota fix"},"items":[{"zh":"从当前模型列表补充 Gemini 额度，同时保留 Claude / GPT 周期额度。","en":"Read Gemini quotas from the current model list while retaining Claude / GPT quota windows."},{"zh":"过滤后台模型与旧别名，去重重复档位；保留账号隔离与未知额度状态。","en":"Filter internal models and retired aliases, deduplicate repeated tiers, and preserve account isolation and unknown quota states."}]}]}
+{"summary":{"zh":"修正后台 flashLite 档位导致多显示 Gemini 3.5 Flash Lite 的问题。","en":"Fix an auxiliary flashLite tier incorrectly appearing as Gemini 3.5 Flash Lite in quota details."},"notes":[{"title":{"zh":"模型显示修正","en":"Model visibility fix"},"items":[{"zh":"不再把后台 Lite 路由档位自动当成可选主模型，保留 Gemini 3.8 Flash 和 Claude / GPT 额度。","en":"Exclude auxiliary Lite routing tiers while retaining Gemini 3.8 Flash and Claude / GPT quotas."},{"zh":"明确出现在可选菜单或默认选择中的 Lite 模型仍可显示，不按版本号硬编码过滤。","en":"Lite models explicitly listed in the selector or as the default remain eligible, without a version-specific blocklist."}]}]}
 -->
