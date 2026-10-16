@@ -142,9 +142,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         return false
     }
     func loadDemo() {
-        for (p, values) in [(Provider.codex, [82.0, 91]), (.claude, [36.0, 64]), (.antigravity, [12.0, 75, 63, 88])] {
+        for (p, values) in [(Provider.codex, [82.0, 91]), (.claude, [36.0, 64]), (.antigravity, [95.0, 42, 100])] {
             states[.standard(p)] = DisplayState(snapshot: Snapshot(windows: values.enumerated().map { i, value in
-                QuotaWindow(id: "demo-\(i)", label: p == .antigravity ? ["Gemini · 每周", "Gemini · 5 小时", "Claude / GPT · 每周", "Claude / GPT · 5 小时"][i] : (i == 0 ? "5 小时" : "每周"), remaining: value, reset: Date().addingTimeInterval(8400))
+                QuotaWindow(id: "demo-\(i)", label: p == .antigravity ? ["Gemini 3.8 Flash", "Claude / GPT · 每周", "Claude / GPT · 5 小时"][i] : (i == 0 ? "5 小时" : "每周"), remaining: value, reset: Date().addingTimeInterval(8400))
             }))
         }
     }

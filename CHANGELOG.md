@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.30 · 2026-10-16
+
+- 修正 0.1.29 把后台 flashLite 档位误当成可选模型的问题，不再额外显示 Gemini 3.5 Flash Lite。
+- 保留当前 Gemini 3.8 Flash 额度与 Claude / GPT 周期额度；只有明确列入模型菜单或默认选择的 Lite 模型才显示。
+
 ## 0.1.29 · 2026-10-16
 
 - 修复新版 Antigravity 只显示 Claude / GPT、遗漏 Gemini 自身额度的问题。

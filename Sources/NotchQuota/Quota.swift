@@ -120,7 +120,9 @@ enum QuotaParser {
         let models = response["models"] as? [String: [String: Any]] ?? [:]
         var ids = Set<String>()
         if let tiers = response["tieredModelIds"] as? [String: [String]] {
-            for values in tiers.values { ids.formUnion(values) }
+            // flashLite is an auxiliary routing tier, not evidence of a selectable main model.
+            // A Lite model explicitly listed by the selector or default below remains eligible.
+            for tier in ["flash", "pro"] { ids.formUnion(tiers[tier] ?? []) }
         }
         if let sorts = response["agentModelSorts"] as? [[String: Any]] {
             for sort in sorts {

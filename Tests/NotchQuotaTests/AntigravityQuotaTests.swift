@@ -28,11 +28,26 @@ final class AntigravityQuotaTests: XCTestCase {
         let summary = QuotaParser.antigravity(GeminiQuotaFixture.json(GeminiQuotaFixture.summary))
         XCTAssertFalse(QuotaParser.hasGeminiQuota(summary))
         let rows = QuotaParser.antigravityGeminiModels(GeminiQuotaFixture.json(GeminiQuotaFixture.models))
-        XCTAssertEqual(rows.map(\.label), ["Gemini 3.5 Flash Lite", "Gemini 3.8 Flash"])
-        XCTAssertEqual(rows.count, 2, "The same model in pro and flash tiers is shown once")
-        XCTAssertEqual(rows[1].remaining, 95)
-        XCTAssertEqual(rows[1].reset, QuotaParser.date("2030-01-01T06:00:00Z"))
+        XCTAssertEqual(rows.map(\.label), ["Gemini 3.8 Flash"])
+        XCTAssertEqual(rows.count, 1, "Exclude auxiliary flashLite and deduplicate the pro/flash main model")
+        XCTAssertEqual(rows[0].remaining, 95)
+        XCTAssertEqual(rows[0].reset, QuotaParser.date("2030-01-01T06:00:00Z"))
         XCTAssertEqual(summary.windows.map(\.remaining), [42, 100], "Third-party windows stay separate")
+    }
+
+    func testLiteIsRetainedWhenExplicitlySelectableRatherThanVersionBlocked() {
+        var data = GeminiQuotaFixture.json(GeminiQuotaFixture.models)
+        data["agentModelSorts"] = [["groups": [["modelIds": ["gemini-3.5-flash-lite"]]]]]
+        XCTAssertEqual(QuotaParser.antigravityGeminiModels(data).map(\.label), ["Gemini 3.5 Flash Lite", "Gemini 3.8 Flash"])
+        data["agentModelSorts"] = []
+        data["defaultAgentModelId"] = "gemini-3.5-flash-lite"
+        XCTAssertEqual(QuotaParser.antigravityGeminiModels(data).count, 2)
+    }
+
+    func testAuxiliaryTierDoesNotBecomeQuotaJustBecauseOtherTiersAreMissing() {
+        var data = GeminiQuotaFixture.json(GeminiQuotaFixture.models)
+        data["tieredModelIds"] = ["flashLite": ["gemini-3.5-flash-lite"]]
+        XCTAssertTrue(QuotaParser.antigravityGeminiModels(data).isEmpty)
     }
 
     func testUnknownFractionsStayUnknownAndTrueZeroSurvives() {
@@ -98,7 +113,7 @@ final class AntigravityGeminiReaderTests: XCTestCase {
             do {
                 let snapshot = try await reader.fetch(.antigravity, expectedGoogleSubject: "fixture-subject")
                 XCTAssertEqual(access, "fixture-success", "A failed Gemini lookup must not silently hide its rows")
-                XCTAssertEqual(snapshot.windows.count, 4)
+                XCTAssertEqual(snapshot.windows.count, 3)
                 XCTAssertEqual(snapshot.windows.first?.remaining, 95)
                 XCTAssertEqual(snapshot.windows.last?.label, "Claude / GPT · 5 小时")
             } catch {
