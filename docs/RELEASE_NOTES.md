@@ -1,19 +1,14 @@
-# AetherNotchQuota 0.1.28 · 绘本小伙伴专属动效与轻量重构
+# AetherNotchQuota 0.1.29 · 恢复 Antigravity Gemini 额度
 
-精选抹茶小龟、枫糖小狐与小幽灵三位伙伴，全面回归温暖细腻的原生手绘绘本水彩风格，带来量身定制的生动物理动效与轻量趣味交互，同时大幅缩减安装包体积。
+修复新版 Antigravity 额度详情只显示 Claude / GPT、没有 Gemini 自身额度的问题。
 
-## 核心更新
+- 补充读取当前可用 Gemini 模型，包括 Gemini 3.8 Flash 的剩余比例和重置时间。
+- 同一模型的多个档位去重，过滤后台模型与未列入当前选择列表的旧别名。
+- 保留 Claude / GPT 周期额度、旧版 Gemini 分组兼容和账号隔离；查询失败保留旧数据并显示错误。
+- 沿用现有刷新频率、界面和小伙伴动效。
 
-1. **三位伙伴精选打磨**：收起外观精炼为抹茶小龟、枫糖小狐、小幽灵（保留已有偏好安全回退），彻底回归高审美绘本手绘质感。
-2. **量身定制细腻动效**：
-   - **抹茶小龟**：沉稳慢调，缩壳入睡微呼吸、舒爽探头向上拔长、三次轻柔咀嚼吞咽、害羞微缩后舒适仰头。
-   - **枫糖小狐**：机敏灵动，飞扑落叶蓄力跃起过冲、蜷尾包裹鼻尖甜梦、猫狐大伸腰前伏后弓、飞机耳轻快摇摆。
-   - **小幽灵**：梦幻水母与 Q 弹果冻，受抚阻尼弹性挤压与回弹（Duang~Duang~）、融化成软摊布丁入睡、逆重力水滴向上拉丝、多波长正弦起伏漂游。
-3. **生动轻量交互**：
-   - **单击摸摸**：触发专属互动反馈与柔光星尘。
-   - **悬空提溜与着陆**：拖拽移动时悬空提溜微晃，落地呈现软萌的缓冲回弹。
-   - **治愈对白气泡**：动作触发时伴随轻量半透明气泡（3.5 秒静默淡出，绝不干扰工作）。
-   - **点播与开关**：右键菜单提供“小伙伴日常动作”与“活泼互动模式”开关，随时可在“陪小伙伴玩”子菜单中点播动作。
-4. **极致瘦身与性能**：
-   - 彻底移除冗余位图与序列帧大图，安装包与内存开销骤降 75%。
-   - 纯原生 Core Animation 矩阵变换驱动，静止时 0% CPU 消耗，低电量与休眠时自动暂停。
+支持 Apple Silicon、macOS 13 及以上。通过应用内“检查更新”升级，或下载安装 DMG。
+
+<!-- aethernative
+{"summary":{"zh":"修复新版 Antigravity 遗漏 Gemini 额度的问题，恢复 Gemini 3.8 Flash 等可用模型的剩余比例与重置时间。","en":"Restore missing Gemini quotas in newer Antigravity builds, including Gemini 3.8 Flash and its reset time."},"notes":[{"title":{"zh":"Gemini 额度修复","en":"Gemini quota fix"},"items":[{"zh":"从当前模型列表补充 Gemini 额度，同时保留 Claude / GPT 周期额度。","en":"Read Gemini quotas from the current model list while retaining Claude / GPT quota windows."},{"zh":"过滤后台模型与旧别名，去重重复档位；保留账号隔离与未知额度状态。","en":"Filter internal models and retired aliases, deduplicate repeated tiers, and preserve account isolation and unknown quota states."}]}]}
+-->

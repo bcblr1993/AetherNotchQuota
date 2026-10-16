@@ -166,6 +166,13 @@ actor QuotaReader {
         }
         guard let project = googleProject, !project.isEmpty else { throw QuotaError.message("Antigravity 未返回当前账号的额度项目") }
         let response = try await request(base + "retrieveUserQuotaSummary", headers: headers, body: ["project": project])
-        return QuotaParser.antigravity(response)
+        let summary = QuotaParser.antigravity(response)
+        if QuotaParser.hasGeminiQuota(summary) { return summary }
+        // Keep the installed build's endpoint, verified identity and project for both quota sources.
+        // Propagate failures so cached data becomes stale instead of silently hiding Gemini again.
+        let models = try await request(base + "fetchAvailableModels", headers: headers, body: ["project": project])
+        let payload = models["response"] as? [String: Any] ?? models
+        guard payload["models"] is [String: Any] else { throw QuotaError.message("额度响应格式已变化") }
+        return Snapshot(windows: QuotaParser.antigravityGeminiModels(models) + summary.windows)
     }
 }
