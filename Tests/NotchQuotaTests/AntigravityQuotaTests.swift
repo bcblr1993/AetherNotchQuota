@@ -18,12 +18,73 @@ private enum GeminiQuotaFixture {
       }
     }
     """#
+    // Synthetic values using the current model IDs and the quota groups shown in the app.
+    static let latestSummary = #"""
+    {"groups":[
+      {"displayName":"Gemini Models","buckets":[
+        {"displayName":"Weekly Limit Remaining","window":"weekly","remainingFraction":0.8},
+        {"window":"5h","remainingFraction":1}]},
+      {"displayName":"Claude and GPT models","buckets":[
+        {"window":"weekly","remainingFraction":0.42},{"window":"5h","remainingFraction":0}]},
+      {"displayName":"Gemini 4 Argon","buckets":[
+        {"displayName":"Gemini 4 Argon Weekly Limit","window":"weekly","remainingFraction":0.6,"resetTime":"2030-01-08T00:00:00Z"}]}]}
+    """#
+    static let latestModels = #"""
+    {"defaultAgentModelId":"gemini-4-argon-medium",
+     "tieredModelIds":{"flash":["gemini-3.8-flash-tiered"],"argon":["gemini-4-argon-high"]},
+     "agentModelSorts":[{"groups":[{"modelIds":["gemini-4-argon-low","gemini-4-argon-medium","gemini-4-argon-high","claude-opus-5-5-medium","claude-sonnet-5-5-medium","gpt-oss-120b-medium"]}]}],
+     "models":{
+       "gemini-4-argon-low":{"displayName":"Gemini 4 Argon (Low)","quotaInfo":{"remainingFraction":0.6,"resetTime":"2030-01-08T00:00:00Z"}},
+       "gemini-4-argon-medium":{"displayName":"Gemini 4 Argon (Medium)","quotaInfo":{"remainingFraction":0.6,"resetTime":"2030-01-08T00:00:00Z"}},
+       "gemini-4-argon-high":{"quotaInfo":{"remainingFraction":0.6,"resetTime":"2030-01-08T00:00:00Z"}},
+       "gemini-3.8-flash-tiered":{"quotaInfo":{"remainingFraction":1}},
+       "claude-opus-5-5-medium":{"displayName":"Claude Opus 5.5 (Medium)","quotaInfo":{"remainingFraction":0.42}},
+       "claude-sonnet-5-5-medium":{"displayName":"Claude Sonnet 5.5 (Medium)","quotaInfo":{"remainingFraction":0.42}},
+       "gpt-oss-120b-medium":{"displayName":"GPT-OSS 120B (Medium)","quotaInfo":{"remainingFraction":0.42}},
+       "gemini-hidden":{"isInternal":true,"quotaInfo":{"remainingFraction":1}}
+     }}
+    """#
     static func json(_ text: String) -> [String: Any] {
         try! JSONSerialization.jsonObject(with: Data(text.utf8)) as! [String: Any]
     }
 }
 
 final class AntigravityQuotaTests: XCTestCase {
+    func testLatestSummaryKeepsIndependentArgonAndSharedClaude55Pools() throws {
+        let summary = QuotaParser.antigravity(GeminiQuotaFixture.json(GeminiQuotaFixture.latestSummary))
+        XCTAssertEqual(summary.windows.map(\.label), ["Gemini · 每周", "Gemini · 5 小时", "Claude / GPT · 每周", "Claude / GPT · 5 小时", "Gemini 4 Argon · 每周"])
+        XCTAssertEqual(summary.windows.map(\.remaining), [80, 100, 42, 0, 60])
+        XCTAssertEqual(summary.windows.last?.reset, QuotaParser.date("2030-01-08T00:00:00Z"))
+        XCTAssertTrue(QuotaParser.antigravityMissingGeminiModels(GeminiQuotaFixture.json(GeminiQuotaFixture.latestModels), summary: summary).isEmpty)
+    }
+
+    func testPartialSummariesOnlySuppressTheirOwnPools() {
+        let models = GeminiQuotaFixture.json(GeminiQuotaFixture.latestModels)
+        let full = QuotaParser.antigravity(GeminiQuotaFixture.json(GeminiQuotaFixture.latestSummary))
+        let sharedOnly = Snapshot(windows: Array(full.windows.prefix(4)))
+        XCTAssertEqual(QuotaParser.antigravityMissingGeminiModels(models, summary: sharedOnly).map(\.label), ["Gemini 4 Argon"])
+        let argonOnly = Snapshot(windows: Array(full.windows.suffix(1)))
+        XCTAssertEqual(QuotaParser.antigravityMissingGeminiModels(models, summary: argonOnly).map(\.label), ["Gemini 3.8 Flash"])
+        var unknown = full
+        unknown.windows[4].remaining = nil
+        XCTAssertTrue(QuotaParser.antigravityMissingGeminiModels(models, summary: unknown).isEmpty, "An unknown authoritative quota must not be replaced with a fallback percentage")
+    }
+
+    func testReasoningVariantsCollapseOnlyWhenQuotaAndResetAgree() {
+        var data = GeminiQuotaFixture.json(GeminiQuotaFixture.latestModels)
+        let rows = QuotaParser.antigravityGeminiModels(data)
+        XCTAssertEqual(rows.map(\.label), ["Gemini 3.8 Flash", "Gemini 4 Argon"])
+        XCTAssertEqual(rows.last?.id, "gemini-model-gemini-4-argon")
+        var models = data["models"] as! [String: [String: Any]]
+        models["gemini-4-argon-low"]?["quotaInfo"] = ["remainingFraction": 0]
+        data["models"] = models
+        XCTAssertEqual(QuotaParser.antigravityGeminiModels(data).count, 4)
+        XCTAssertEqual(QuotaParser.antigravityGeminiModels(data).first { $0.label.contains("Low") }?.remaining, 0)
+        data["agentModelSorts"] = []
+        data["defaultAgentModelId"] = "claude-opus-5-5-medium"
+        XCTAssertEqual(QuotaParser.antigravityGeminiModels(data).map(\.label), ["Gemini 3.8 Flash", "Gemini 4 Argon"], "Argon is also discoverable through a main model tier")
+    }
+
     func testTieredGeminiMissingFromSummaryIsRestoredWithoutAliases() throws {
         let summary = QuotaParser.antigravity(GeminiQuotaFixture.json(GeminiQuotaFixture.summary))
         XCTAssertFalse(QuotaParser.hasGeminiQuota(summary))
@@ -79,15 +140,24 @@ private final class GeminiQuotaProtocol: URLProtocol {
     override class func canonicalRequest(for request: URLRequest) -> URLRequest { request }
     override func startLoading() {
         let url = request.url!
+        let access = request.value(forHTTPHeaderField: "Authorization") ?? ""
         var code = 200
         let body: String
         if url.host == "openidconnect.googleapis.com" { body = #"{"sub":"fixture-subject"}"# }
         else if url.host != "daily-cloudcode-pa.googleapis.com" { code = 400; body = "{}" }
         else if url.path.contains("loadCodeAssist") { body = #"{"cloudaicompanionProject":"fixture-project"}"# }
-        else if url.path.contains("retrieveUserQuotaSummary") { body = GeminiQuotaFixture.summary }
+        else if url.path.contains("retrieveUserQuotaSummary") {
+            if access.contains("latest") {
+                var data = GeminiQuotaFixture.json(GeminiQuotaFixture.latestSummary)
+                let groups = data["groups"] as! [[String: Any]]
+                if access.contains("shared") { data["groups"] = Array(groups.prefix(2)) }
+                if access.contains("argon") { data["groups"] = Array(groups.suffix(1)) }
+                body = String(decoding: try! JSONSerialization.data(withJSONObject: data), as: UTF8.self)
+            } else { body = GeminiQuotaFixture.summary }
+        }
         else if url.path.contains("fetchAvailableModels") {
-            if request.value(forHTTPHeaderField: "Authorization") == "Bearer fixture-failure" { code = 503 }
-            body = GeminiQuotaFixture.models
+            if access.contains("failure") { code = 503 }
+            body = access.contains("latest") ? GeminiQuotaFixture.latestModels : GeminiQuotaFixture.models
         } else { code = 400; body = "{}" }
         client?.urlProtocol(self, didReceive: HTTPURLResponse(url: url, statusCode: code, httpVersion: nil, headerFields: ["Content-Type": "application/json"])!, cacheStoragePolicy: .notAllowed)
         client?.urlProtocol(self, didLoad: Data(body.utf8))
@@ -107,17 +177,23 @@ final class AntigravityGeminiReaderTests: XCTestCase {
         let config = URLSessionConfiguration.ephemeral; config.protocolClasses = [GeminiQuotaProtocol.self]
         let session = URLSession(configuration: config); defer { session.invalidateAndCancel() }
         let instance = AntigravityInstance(appPath: app.path, credentialPath: credential.path, name: "Fixture", manual: true)
-        for access in ["fixture-success", "fixture-failure"] {
+        for access in ["fixture-success", "fixture-failure", "fixture-latest", "fixture-latest-shared", "fixture-latest-argon", "fixture-latest-failure"] {
             try JSONSerialization.data(withJSONObject: ["token": ["access_token": access, "refresh_token": "fixture", "expiry": "2099-01-01T00:00:00Z"]]).write(to: credential)
             let reader = QuotaReader(googleInstance: instance, session: session)
             do {
                 let snapshot = try await reader.fetch(.antigravity, expectedGoogleSubject: "fixture-subject")
-                XCTAssertEqual(access, "fixture-success", "A failed Gemini lookup must not silently hide its rows")
+                XCTAssertFalse(access.contains("failure"), "A failed Gemini lookup must not silently hide its rows")
+                if access.contains("latest") {
+                    XCTAssertEqual(snapshot.windows.count, access.contains("argon") ? 2 : 5)
+                    XCTAssertEqual(snapshot.windows.filter { $0.label.contains("Argon") }.count, 1)
+                    XCTAssertTrue(snapshot.windows.contains { $0.label == "Gemini 3.8 Flash" || $0.label == "Gemini · 每周" })
+                    continue
+                }
                 XCTAssertEqual(snapshot.windows.count, 3)
                 XCTAssertEqual(snapshot.windows.first?.remaining, 95)
                 XCTAssertEqual(snapshot.windows.last?.label, "Claude / GPT · 5 小时")
             } catch {
-                XCTAssertEqual(access, "fixture-failure", "Both reads must use the installed endpoint")
+                XCTAssertTrue(access.contains("failure"), "Both reads must use the installed endpoint")
             }
         }
     }

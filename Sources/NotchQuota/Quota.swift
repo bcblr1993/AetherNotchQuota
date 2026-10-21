@@ -94,7 +94,8 @@ enum QuotaParser {
                     let nested = b["remaining"] as? [String: Any]
                     let raw = b["remainingFraction"] ?? nested?["remainingFraction"]
                     let rawBucket = b["displayName"] as? String ?? b["window"] as? String ?? "额度"
-                    let bucket = rawBucket.lowercased().contains("weekly") ? "每周" : rawBucket.lowercased().contains("five") ? "5 小时" : rawBucket
+                    let period = (b["window"] as? String ?? rawBucket).lowercased()
+                    let bucket = period.contains("weekly") ? "每周" : (period == "5h" || period.contains("five")) ? "5 小时" : rawBucket
                     rows.append(.init(id: "\(gi)-\(bi)", label: name.replacingOccurrences(of: " Models", with: "").replacingOccurrences(of: " models", with: "").replacingOccurrences(of: "Claude and GPT", with: "Claude / GPT") + " · " + bucket, remaining: percent(raw, fraction: true), reset: date(b["resetTime"])))
                 }
             }
@@ -113,6 +114,24 @@ enum QuotaParser {
         snapshot.windows.contains { $0.label.lowercased().hasPrefix("gemini") }
     }
 
+    /// A shared Gemini window does not cover Argon's independent quota pool.
+    /// Prefer summary windows (including unknown values) over per-model fallback values.
+    static func antigravityMissingGeminiModels(_ data: [String: Any], summary: Snapshot) -> [QuotaWindow] {
+        let groups = Set(summary.windows.map {
+            $0.label.components(separatedBy: " · ").first!.lowercased()
+        })
+        return antigravityGeminiModels(data).filter { row in
+            let name = geminiFamilyName(row.label).lowercased()
+            if groups.contains(name) { return false }
+            return !(groups.contains("gemini") && !name.contains("argon"))
+        }
+    }
+
+    private static func geminiFamilyName(_ name: String) -> String {
+        name.replacingOccurrences(of: #"(?i)\s+(?:\((?:low|medium|high|max)\)|low|medium|high|max)$"#,
+                                  with: "", options: .regularExpression)
+    }
+
     /// Newer builds expose Gemini through model tiers, outside the third-party quota summary.
     /// Only selectable agent models belong here; tab completion and retired aliases do not.
     static func antigravityGeminiModels(_ data: [String: Any]) -> [QuotaWindow] {
@@ -122,7 +141,7 @@ enum QuotaParser {
         if let tiers = response["tieredModelIds"] as? [String: [String]] {
             // flashLite is an auxiliary routing tier, not evidence of a selectable main model.
             // A Lite model explicitly listed by the selector or default below remains eligible.
-            for tier in ["flash", "pro"] { ids.formUnion(tiers[tier] ?? []) }
+            for tier in ["flash", "pro", "argon"] { ids.formUnion(tiers[tier] ?? []) }
         }
         if let sorts = response["agentModelSorts"] as? [[String: Any]] {
             for sort in sorts {
@@ -148,6 +167,19 @@ enum QuotaParser {
                               remaining: percent(quota["remainingFraction"], fraction: true),
                               reset: date(quota["resetTime"])))
         }
-        return rows
+        // Reasoning levels can share one pool. Collapse only when both quota and reset agree;
+        // differing values must remain visible rather than being silently discarded.
+        let families = Dictionary(grouping: rows) { geminiFamilyName($0.label) }
+        var seen = Set<String>()
+        return rows.compactMap { row in
+            let name = geminiFamilyName(row.label)
+            let siblings = families[name] ?? []
+            guard siblings.allSatisfy({ $0.remaining == row.remaining && $0.reset == row.reset }) else { return row }
+            guard seen.insert(name).inserted else { return nil }
+            var result = row
+            result.label = name
+            result.id = row.id.replacingOccurrences(of: #"-(?:low|medium|high|max)$"#, with: "", options: .regularExpression)
+            return result
+        }
     }
 }

@@ -1,13 +1,12 @@
-# AetherNotchQuota 0.1.30 · 修正 Gemini 模型显示
+# AetherNotchQuota 0.1.31 · 最新 Antigravity 模型额度
 
-修正 0.1.29 把接口中的后台 flashLite 档位误当成可选主模型、额外显示 Gemini 3.5 Flash Lite 的问题。
+- 适配 Gemini 4 Argon 的独立额度，兼容 Gemini 3.8 Flash 和 Claude Opus / Sonnet 5.5。
+- 按额度组补查缺失模型，修复已有 Gemini 汇总时可能遗漏 Argon、只有 Argon 时可能遗漏 Flash 的问题。
+- 合并额度和重置时间一致的推理档位；Claude / GPT 继续显示共享周期额度，避免重复计数。
+- 保留未知额度与真实 0% 的区别，以及后台 Lite 档位过滤、账号与服务环境隔离。
 
-- 保留 Gemini 3.8 Flash 的剩余额度与重置时间，以及 Claude / GPT 的周期额度。
-- 按档位用途过滤后台模型，不硬编码屏蔽特定版本；Lite 模型若明确出现在可选菜单或默认选择中，仍可正常显示。
-- 补充隐藏档位、明确可选 Lite 模型和完整额度读取回归测试。
-
-支持 Apple Silicon、macOS 13 及以上。通过应用内“检查更新”升级，或下载安装 DMG。
+支持 Apple Silicon、macOS 13 及以上。通过应用内“检查更新”升级，或下载安装 DMG。模型和额度以当前账号接口返回为准。
 
 <!-- aethernative
-{"summary":{"zh":"修正后台 flashLite 档位导致多显示 Gemini 3.5 Flash Lite 的问题。","en":"Fix an auxiliary flashLite tier incorrectly appearing as Gemini 3.5 Flash Lite in quota details."},"notes":[{"title":{"zh":"模型显示修正","en":"Model visibility fix"},"items":[{"zh":"不再把后台 Lite 路由档位自动当成可选主模型，保留 Gemini 3.8 Flash 和 Claude / GPT 额度。","en":"Exclude auxiliary Lite routing tiers while retaining Gemini 3.8 Flash and Claude / GPT quotas."},{"zh":"明确出现在可选菜单或默认选择中的 Lite 模型仍可显示，不按版本号硬编码过滤。","en":"Lite models explicitly listed in the selector or as the default remain eligible, without a version-specific blocklist."}]}]}
+{"summary":{"zh":"适配 Gemini 4 Argon 独立额度及最新 Antigravity 模型，修复漏查与重复显示。","en":"Support independent Gemini 4 Argon quotas and current Antigravity models, with missing-pool recovery and deduplication."},"notes":[{"title":{"zh":"最新模型额度","en":"Current model quotas"},"items":[{"zh":"兼容 Gemini 4 Argon、Gemini 3.8 Flash 与 Claude Opus / Sonnet 5.5，按账号返回的额度组显示。","en":"Handle Gemini 4 Argon, Gemini 3.8 Flash and Claude Opus / Sonnet 5.5 using the quota pools returned for each account."},{"zh":"补查缺失额度组，合并相同推理档位，保留未知额度与真实零额度。","en":"Recover missing pools, combine matching reasoning variants and preserve unknown versus zero quota."}]}]}
 -->

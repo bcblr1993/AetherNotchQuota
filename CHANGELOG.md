@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.31 · 2026-10-21
+
+- 适配 Gemini 4 Argon 独立额度，兼容 Gemini 3.8 Flash 与 Claude Opus / Sonnet 5.5 的共享周期额度。
+- 按额度组补查缺失模型，避免已有 Gemini 汇总时遗漏独立额度，或只有 Argon 时遗漏 Flash。
+- 合并额度与重置时间一致的推理档位，保留未知值、真实零额度和不同档位的差异。
+
 ## 0.1.30 · 2026-10-16
 
 - 修正 0.1.29 把后台 flashLite 档位误当成可选模型的问题，不再额外显示 Gemini 3.5 Flash Lite。
