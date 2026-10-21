@@ -84,6 +84,7 @@ private final class AccountProtocol: URLProtocol {
         var value: [String: Any]
         if url.path.contains("userinfo") { value = ["sub": subject, "name": "Same display name"] }
         else if url.path.contains("loadCodeAssist") { value = ["cloudaicompanionProject": subject] }
+        else if url.path.contains("fetchAvailableModels") { value = ["models": [:]] }
         else {
             Self.lock.lock(); Self.quotaCalls += 1; Self.lock.unlock()
             value = ["groups": [["displayName": "Gemini", "buckets": [["displayName": "Weekly Limit Remaining", "remainingFraction": subject == "subject-first" ? 0.2 : 0.8]]]]]
