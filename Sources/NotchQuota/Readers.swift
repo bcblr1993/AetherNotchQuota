@@ -35,7 +35,7 @@ actor QuotaReader {
         self.remote = session ?? Self.makeSession()
     }
     func accountIdentity() -> AccountIdentity? { identityVerifiedForFetch ? googleIdentity : nil }
-    func clearGoogleCache() { identityVerifiedForFetch = false; googleCredential = nil; googleSourceAccess = nil; googleProject = nil; googleIdentity = nil; identityCheckedAt = nil; googleEndpoint = nil; googleClient = nil }
+    func clearGoogleCache() { identityVerifiedForFetch = false; googleCredential = nil; googleSourceAccess = nil; googleProject = nil; googleIdentity = nil; identityCheckedAt = nil; googleConfiguration = nil; googleClient = nil }
 
     private let remote: URLSession
     private static func makeSession() -> URLSession {
@@ -47,7 +47,7 @@ actor QuotaReader {
     private var googleCredential: GoogleCredential?
     private var googleProject: String?
     private var googleSourceAccess: String?
-    private var googleEndpoint: String?
+    private var googleConfiguration: Installation.AntigravityConfiguration?
     private var googleClient: (String, String)?
     private func json(_ data: Data) throws -> [String: Any] {
         guard let dict = try JSONSerialization.jsonObject(with: data) as? [String: Any] else { throw QuotaError.message("额度响应格式已变化") }
@@ -142,15 +142,12 @@ actor QuotaReader {
             }
             guard refreshed else { throw QuotaError.message("Antigravity 登录已过期，请重新登录") }
         }
-        // Read the installed build's endpoint; production and daily are different quota pools.
-        if googleEndpoint == nil {
-            if let instance = googleInstance {
-                let data = try Data(contentsOf: instance.appURL.appendingPathComponent("Contents/Resources/app.asar"), options: .alwaysMapped)
-                googleEndpoint = try Installation.endpoint(from: data)
-            } else { googleEndpoint = try Installation.antigravityEndpoint() }
+        // Endpoint and client identity must both come from this account's selected installation.
+        if googleConfiguration == nil {
+            googleConfiguration = try Installation.antigravityConfiguration(appURL: googleInstance?.appURL)
         }
-        let base = googleEndpoint!
-        let headers = ["Authorization": "Bearer \(credential.access)", "User-Agent": "antigravity"]
+        let base = googleConfiguration!.endpoint
+        let headers = ["Authorization": "Bearer \(credential.access)", "User-Agent": googleConfiguration!.userAgent]
         if googleIdentity == nil || Date().timeIntervalSince(identityCheckedAt ?? .distantPast) >= 3600 {
             let identity: AccountIdentity
             do { identity = try AccountIdentity.parse(await request("https://openidconnect.googleapis.com/v1/userinfo", headers: headers)) }

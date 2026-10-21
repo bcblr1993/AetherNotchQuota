@@ -50,6 +50,16 @@ private enum GeminiQuotaFixture {
 }
 
 final class AntigravityQuotaTests: XCTestCase {
+    func testClientIdentityTracksInstalledVersionWithoutInventingHubForLegacyApps() {
+        let hub = Data("'--subclient_type', 'hub'".utf8)
+        XCTAssertEqual(Installation.antigravityUserAgent(from: hub, version: "2.24.0"), "antigravity/hub/2.24.0 (os_type=darwin; arch=arm64)")
+        XCTAssertEqual(Installation.antigravityUserAgent(from: Data(), version: "1.99.0"), "antigravity/1.99.0 (os_type=darwin; arch=arm64)")
+        XCTAssertEqual(Installation.antigravityUserAgent(from: Data("'--subclient_type', 'ide'".utf8), version: "2.25.1"), "antigravity/2.25.1 (os_type=darwin; arch=arm64)")
+        for version in [nil, "", "2.24.0\r\nX-Injected: yes"] as [String?] {
+            XCTAssertEqual(Installation.antigravityUserAgent(from: hub, version: version), "antigravity")
+        }
+    }
+
     func testLatestSummaryKeepsIndependentArgonAndSharedClaude55Pools() throws {
         let summary = QuotaParser.antigravity(GeminiQuotaFixture.json(GeminiQuotaFixture.latestSummary))
         XCTAssertEqual(summary.windows.map(\.label), ["Gemini · 每周", "Gemini · 5 小时", "Claude / GPT · 每周", "Claude / GPT · 5 小时", "Gemini 4 Argon · 每周"])
@@ -141,13 +151,16 @@ private final class GeminiQuotaProtocol: URLProtocol {
     override func startLoading() {
         let url = request.url!
         let access = request.value(forHTTPHeaderField: "Authorization") ?? ""
+        // Real 2.24.0 behavior: this account receives Argon only for the desktop hub client.
+        let hub = request.value(forHTTPHeaderField: "User-Agent") == "antigravity/hub/2.25.1 (os_type=darwin; arch=arm64)"
+        let latest = access.contains("latest") || (access.contains("client-gated") && hub)
         var code = 200
         let body: String
         if url.host == "openidconnect.googleapis.com" { body = #"{"sub":"fixture-subject"}"# }
         else if url.host != "daily-cloudcode-pa.googleapis.com" { code = 400; body = "{}" }
         else if url.path.contains("loadCodeAssist") { body = #"{"cloudaicompanionProject":"fixture-project"}"# }
         else if url.path.contains("retrieveUserQuotaSummary") {
-            if access.contains("latest") {
+            if latest {
                 var data = GeminiQuotaFixture.json(GeminiQuotaFixture.latestSummary)
                 let groups = data["groups"] as! [[String: Any]]
                 if access.contains("shared") { data["groups"] = Array(groups.prefix(2)) }
@@ -157,7 +170,7 @@ private final class GeminiQuotaProtocol: URLProtocol {
         }
         else if url.path.contains("fetchAvailableModels") {
             if access.contains("failure") { code = 503 }
-            body = access.contains("latest") ? GeminiQuotaFixture.latestModels : GeminiQuotaFixture.models
+            body = latest ? GeminiQuotaFixture.latestModels : GeminiQuotaFixture.models
         } else { code = 400; body = "{}" }
         client?.urlProtocol(self, didReceive: HTTPURLResponse(url: url, statusCode: code, httpVersion: nil, headerFields: ["Content-Type": "application/json"])!, cacheStoragePolicy: .notAllowed)
         client?.urlProtocol(self, didLoad: Data(body.utf8))
@@ -167,6 +180,25 @@ private final class GeminiQuotaProtocol: URLProtocol {
 }
 
 final class AntigravityGeminiReaderTests: XCTestCase {
+    func testInstalledHubClientReceivesIndependentArgonQuota() async throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let app = root.appendingPathComponent("Fixture.app")
+        try FileManager.default.createDirectory(at: app.appendingPathComponent("Contents/Resources"), withIntermediateDirectories: true)
+        try Data("'--subclient_type',\n 'hub', '--cloud_code_endpoint', 'https://daily-cloudcode-pa.googleapis.com'".utf8).write(to: app.appendingPathComponent("Contents/Resources/app.asar"))
+        try PropertyListSerialization.data(fromPropertyList: ["CFBundleShortVersionString": "2.25.1"], format: .xml, options: 0).write(to: app.appendingPathComponent("Contents/Info.plist"))
+        let credential = root.appendingPathComponent("fixture.json")
+        try JSONSerialization.data(withJSONObject: ["token": ["access_token": "fixture-client-gated", "refresh_token": "fixture", "expiry": "2099-01-01T00:00:00Z"]]).write(to: credential)
+        let config = URLSessionConfiguration.ephemeral; config.protocolClasses = [GeminiQuotaProtocol.self]
+        let session = URLSession(configuration: config); defer { session.invalidateAndCancel() }
+        let instance = AntigravityInstance(appPath: app.path, credentialPath: credential.path, name: "Fixture", manual: true)
+        let reader = QuotaReader(googleInstance: instance, session: session)
+        let snapshot = try await reader.fetch(.antigravity, expectedGoogleSubject: "fixture-subject")
+        XCTAssertEqual(snapshot.windows.count, 5)
+        XCTAssertEqual(snapshot.windows.last?.label, "Gemini 4 Argon · 每周")
+        XCTAssertEqual(snapshot.windows.last?.remaining, 60)
+    }
+
     func testReaderCombinesSameEnvironmentSourcesAndPropagatesModelFailure() async throws {
         let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         defer { try? FileManager.default.removeItem(at: root) }
