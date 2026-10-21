@@ -3,6 +3,30 @@ import Foundation
 
 /// Resolve installed applications without assuming a username or /Applications location.
 enum Installation {
+    struct AntigravityConfiguration {
+        let endpoint: String
+        let userAgent: String
+    }
+
+    static func antigravityConfiguration(appURL: URL? = nil) throws -> AntigravityConfiguration {
+        guard let app = appURL ?? app("Antigravity") else { throw QuotaError.message("请先安装并登录 Antigravity") }
+        let archive = try Data(contentsOf: app.appendingPathComponent("Contents/Resources/app.asar"), options: .alwaysMapped)
+        let info = (try? Data(contentsOf: app.appendingPathComponent("Contents/Info.plist")))
+            .flatMap { try? PropertyListSerialization.propertyList(from: $0, format: nil) as? [String: Any] }
+        return try AntigravityConfiguration(endpoint: endpoint(from: archive), userAgent: antigravityUserAgent(from: archive, version: info?["CFBundleShortVersionString"] as? String))
+    }
+
+    static func antigravityUserAgent(from archive: Data, version: String?) -> String {
+        // Match the selected installed client's identity: hub is a distinct backend capability.
+        guard let version, version.range(of: #"\A[0-9]+(?:\.[0-9]+){1,3}(?:[-+][A-Za-z0-9.-]+)?\z"#, options: .regularExpression) != nil else { return "antigravity" }
+        var subclient = ""
+        if let marker = archive.range(of: Data("--subclient_type".utf8)) {
+            let snippet = String(decoding: archive[marker.upperBound..<min(archive.count, marker.upperBound + 128)], as: UTF8.self)
+            if snippet.range(of: #"\A["']\s*,\s*["']hub["']"#, options: .regularExpression) != nil { subclient = "/hub" }
+        }
+        return "antigravity\(subclient)/\(version) (os_type=darwin; arch=arm64)"
+    }
+
     static func app(_ name: String) -> URL? {
         let identifiers: [String]
         switch name {

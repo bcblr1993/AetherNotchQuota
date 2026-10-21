@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.32 · 2026-10-21
+
+- 修复 0.1.31 升级后仍缺少 Gemini 4 Argon 的问题：额度请求使用所选 Antigravity 安装包的桌面客户端标识与真实版本。
+- 同一账号的 Gemini、Claude / GPT 与 Argon 独立周额度现在与 Antigravity 桌面端保持一致；保留旧版与多实例隔离。
+
 ## 0.1.31 · 2026-10-21
 
 - 适配 Gemini 4 Argon 独立额度，兼容 Gemini 3.8 Flash 与 Claude Opus / Sonnet 5.5 的共享周期额度。

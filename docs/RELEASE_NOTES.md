@@ -1,12 +1,11 @@
-# AetherNotchQuota 0.1.31 · 最新 Antigravity 模型额度
+# AetherNotchQuota 0.1.32 · 修复 Argon 额度缺失
 
-- 适配 Gemini 4 Argon 的独立额度，兼容 Gemini 3.8 Flash 和 Claude Opus / Sonnet 5.5。
-- 按额度组补查缺失模型，修复已有 Gemini 汇总时可能遗漏 Argon、只有 Argon 时可能遗漏 Flash 的问题。
-- 合并额度和重置时间一致的推理档位；Claude / GPT 继续显示共享周期额度，避免重复计数。
-- 保留未知额度与真实 0% 的区别，以及后台 Lite 档位过滤、账号与服务环境隔离。
+- 修复升级 0.1.31 后仍未显示 Gemini 4 Argon 的问题。
+- 额度请求自动读取所选 Antigravity 安装包的真实版本与桌面 hub 客户端标识，使服务返回完整的 Gemini、Claude / GPT 和 Argon 独立周额度。
+- 保留旧版兼容、账号与服务环境隔离，以及未知额度与真实 0% 的区别。
 
-支持 Apple Silicon、macOS 13 及以上。通过应用内“检查更新”升级，或下载安装 DMG。模型和额度以当前账号接口返回为准。
+支持 Apple Silicon、macOS 13 及以上。通过应用内“检查更新”升级，或下载安装 DMG。
 
 <!-- aethernative
-{"summary":{"zh":"适配 Gemini 4 Argon 独立额度及最新 Antigravity 模型，修复漏查与重复显示。","en":"Support independent Gemini 4 Argon quotas and current Antigravity models, with missing-pool recovery and deduplication."},"notes":[{"title":{"zh":"最新模型额度","en":"Current model quotas"},"items":[{"zh":"兼容 Gemini 4 Argon、Gemini 3.8 Flash 与 Claude Opus / Sonnet 5.5，按账号返回的额度组显示。","en":"Handle Gemini 4 Argon, Gemini 3.8 Flash and Claude Opus / Sonnet 5.5 using the quota pools returned for each account."},{"zh":"补查缺失额度组，合并相同推理档位，保留未知额度与真实零额度。","en":"Recover missing pools, combine matching reasoning variants and preserve unknown versus zero quota."}]}]}
+{"summary":{"zh":"修复升级后仍缺少 Gemini 4 Argon 额度的问题，自动匹配 Antigravity 桌面客户端标识。","en":"Fix missing Gemini 4 Argon quotas after upgrading by matching the installed Antigravity desktop client identity."},"notes":[{"title":{"zh":"Argon 额度修复","en":"Argon quota fix"},"items":[{"zh":"从所选安装包读取真实版本与 hub 标识，正确获取 Argon 独立周额度。","en":"Read the actual version and hub identity from the selected installation to retrieve independent Argon weekly quotas."},{"zh":"保留旧版本兼容、账号与服务环境隔离，以及未知额度与真实零额度的区别。","en":"Preserve legacy compatibility, account and service isolation, and the distinction between unknown and zero quota."}]}]}
 -->

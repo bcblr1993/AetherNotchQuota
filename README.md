@@ -11,9 +11,9 @@ AetherNotchQuota 是 Apple Silicon Mac 上的原生 AI 订阅额度助手。把 
 
 [官网](https://aethernative.com/apps/notchquota/) · [下载正式版](https://github.com/bcblr1993/AetherNotchQuota/releases/latest) · [使用帮助](https://aethernative.com/apps/notchquota/support/) · [更新记录](CHANGELOG.md) · [反馈问题](https://github.com/bcblr1993/AetherNotchQuota/issues/new/choose)
 
-## 0.1.31 · 最新 Antigravity 模型额度
+## 0.1.32 · 修复 Argon 额度缺失
 
-适配 Gemini 4 Argon 独立额度，兼容 Gemini 3.8 Flash 和 Claude Opus / Sonnet 5.5。按额度组补全缺失模型，合并额度与重置时间一致的推理档位，保留 Claude / GPT 共享周期额度。模型是否显示以当前账号接口返回为准。
+修复升级 0.1.31 后仍未显示 Gemini 4 Argon 的问题。额度请求自动使用当前 Antigravity 安装包的桌面客户端标识和真实版本，正确获取 Gemini、Claude / GPT 与 Argon 独立周额度，保留旧版本兼容和多实例隔离。
 
 ## 选一种适合你的显示方式
 
