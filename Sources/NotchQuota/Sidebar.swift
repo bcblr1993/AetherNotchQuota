@@ -573,6 +573,9 @@ final class SidebarSurface: NSView {
     }
     func playCompanion(_ activity: CompanionActivity) {
         guard canPlayCompanion else { return }
+        if activity == .pet {
+            NSHapticFeedbackManager.defaultPerformer.perform(.generic, performanceTime: .default)
+        }
         companionLife.stop(); reminderTask?.cancel(); reminder.hide()
         cancelExpand(); cancelIdle(); dismiss(animated: false)
         manualCompanionUntil = ProcessInfo.processInfo.systemUptime + activity.duration + 0.25
@@ -744,7 +747,10 @@ final class SidebarSurface: NSView {
         panel.setFrameOrigin(NSPoint(x: dragOrigin.x + dx, y: dragOrigin.y + dy))
         if !carryingCompanion {
             carryingCompanion = true
-            if collapsed && !docked && companionActivitiesEnabled && motion > 0 && !ProcessInfo.processInfo.isLowPowerModeEnabled { emblem.playActivity(.pickup) }
+            if collapsed && !docked && companionActivitiesEnabled && motion > 0 && !ProcessInfo.processInfo.isLowPowerModeEnabled {
+                NSHapticFeedbackManager.defaultPerformer.perform(.levelChange, performanceTime: .default)
+                emblem.playActivity(.pickup)
+            }
         }
     }
     func finishDrag(moved: Bool) {
@@ -761,7 +767,10 @@ final class SidebarSurface: NSView {
         place(at: point, screen: screen, keepCollapsed: collapsed)
         pointerInBar = panel.frame.contains(NSEvent.mouseLocation)
         scheduleIdleCollapse()
-        if collapsed && !docked && companionActivitiesEnabled && motion > 0 && !ProcessInfo.processInfo.isLowPowerModeEnabled { emblem.playActivity(.land) }
+        if collapsed && !docked && companionActivitiesEnabled && motion > 0 && !ProcessInfo.processInfo.isLowPowerModeEnabled {
+            NSHapticFeedbackManager.defaultPerformer.perform(.alignment, performanceTime: .default)
+            emblem.playActivity(.land)
+        }
         companionLife.sync()
     }
     func place(at point: NSPoint, screen: NSScreen, keepCollapsed: Bool = false) {

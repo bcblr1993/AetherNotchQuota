@@ -147,4 +147,61 @@ final class CompanionActivityTests: XCTestCase {
             }
         }
     }
+    func testQuotaMoodCaptionsAdaptByRemainingQuotaLevel() {
+        // High Quota (>= 80%)
+        XCTAssertEqual(CompanionActivity.play.caption(for: .turtle, quota: 95), "电量超满，慢吞吞也是元气十足！")
+        XCTAssertEqual(CompanionActivity.play.caption(for: .fox, quota: 85), "尾巴摇成螺旋桨！快去探险！")
+        XCTAssertEqual(CompanionActivity.play.caption(for: .ghost, quota: 100), "能量满格，连幽灵尾巴都在发光！")
+        XCTAssertEqual(CompanionActivity.pet.caption(for: .turtle, quota: 80), "蹭蹭你！今天状态超级棒！")
+        XCTAssertEqual(CompanionActivity.greet.caption(for: .fox, quota: 90), "枫糖小狐来啦！能量拉满，准备出发！")
+
+        // Low Quota (<= 20%)
+        XCTAssertEqual(CompanionActivity.sleep.caption(for: .turtle, quota: 10), "额度见底啦，缩进壳里充会儿电")
+        XCTAssertEqual(CompanionActivity.sleep.caption(for: .fox, quota: 5), "耳朵软趴趴... 额度快见底了，先睡一觉")
+        XCTAssertEqual(CompanionActivity.sleep.caption(for: .ghost, quota: 18), "星星灯快熄了，飘下来小睡一会儿")
+        XCTAssertEqual(CompanionActivity.pet.caption(for: .fox, quota: 15), "下巴搭在你手心，想从你这里充点电")
+        XCTAssertEqual(CompanionActivity.greet.caption(for: .ghost, quota: 0), "光芒微弱，但我一直都在呢")
+
+        // Normal Quota (20% - 80%) & Unknown (nil)
+        XCTAssertEqual(CompanionActivity.sleep.caption(for: .turtle, quota: 50), "缩回壳边，慢慢入睡")
+        XCTAssertEqual(CompanionActivity.play.caption(for: .fox, quota: 60), "追一片小枫叶")
+        XCTAssertEqual(CompanionActivity.play.caption(for: .ghost, quota: nil), "接住一颗小星星")
+
+        // Localization completeness across all languages
+        let testKeys = [
+            "额度见底啦，缩进壳里充会儿电", "耳朵软趴趴... 额度快见底了，先睡一觉", "星星灯快熄了，飘下来小睡一会儿",
+            "粮仓见底，慢慢嚼一片小叶子", "浆果快吃完啦，省着点力气", "星星糖只剩一颗了，小口尝尝",
+            "蹭蹭你，就算额度不多也一直陪着你", "下巴搭在你手心，想从你这里充点电", "冰凉凉地贴贴你，心里暖洋洋的",
+            "电量超满，慢吞吞也是元气十足！", "尾巴摇成螺旋桨！快去探险！", "能量满格，连幽灵尾巴都在发光！",
+            "抹茶小龟报到！今天精力充沛！", "枫糖小狐来啦！能量拉满，准备出发！", "幽灵闪亮登场！能量像银河一样满！"
+        ]
+        for language in AppLanguage.supported {
+            for key in testKeys {
+                XCTAssertNotNil(L10n.catalogs[language]?[key], "Missing translation for key: \(key) in \(language.rawValue)")
+            }
+        }
+    }
+    func testQuotaMoodInfluencesActivitySequenceWhilePreservingCausalTransitions() {
+        for quota in [Double(10), Double(90), nil] {
+            var sequence = CompanionActivitySequence()
+            var previous: CompanionActivity?, seen = Set<CompanionActivity>()
+            for _ in 0..<60 {
+                let activity = sequence.next(style: .turtle, hour: 14, quota: quota)
+                if previous == nil || previous == .hungry { XCTAssertEqual(activity, .snack) }
+                if previous == .sleep { XCTAssertEqual(activity, .stretch) }
+                if previous == .yawn { XCTAssertEqual(activity, .sleep) }
+                XCTAssertNotEqual(activity, previous)
+                seen.insert(activity); previous = activity
+            }
+            XCTAssertEqual(seen, Set(CompanionActivity.daily), "Sequence with quota \(String(describing: quota)) must visit all daily activities")
+        }
+    }
+    func testSidebarEmblemStoresRemainingQuota() {
+        let emblem = SidebarEmblem()
+        XCTAssertNil(emblem.remainingQuota)
+        emblem.update(remaining: 77.5, scale: 2)
+        XCTAssertEqual(emblem.remainingQuota, 77.5)
+        emblem.update(remaining: nil, scale: 2)
+        XCTAssertNil(emblem.remainingQuota)
+    }
 }

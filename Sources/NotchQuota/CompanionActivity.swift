@@ -40,7 +40,107 @@ enum CompanionActivity: String, CaseIterable {
         default: return 5
         }
     }
-    func caption(for style: SidebarAppearance) -> String {
+    func caption(for style: SidebarAppearance, quota: Double? = nil) -> String {
+        if let quota {
+            if quota <= 20 {
+                if let text = lowQuotaCaption(for: style) { return text }
+            } else if quota >= 80 {
+                if let text = highQuotaCaption(for: style) { return text }
+            }
+        }
+        return defaultCaption(for: style)
+    }
+    private func lowQuotaCaption(for style: SidebarAppearance) -> String? {
+        switch self {
+        case .sleep, .yawn:
+            switch style {
+            case .turtle: return L10n.text("额度见底啦，缩进壳里充会儿电")
+            case .fox: return L10n.text("耳朵软趴趴... 额度快见底了，先睡一觉")
+            case .ghost: return L10n.text("星星灯快熄了，飘下来小睡一会儿")
+            default: return nil
+            }
+        case .snack, .hungry:
+            switch style {
+            case .turtle: return L10n.text("粮仓见底，慢慢嚼一片小叶子")
+            case .fox: return L10n.text("浆果快吃完啦，省着点力气")
+            case .ghost: return L10n.text("星星糖只剩一颗了，小口尝尝")
+            default: return nil
+            }
+        case .pet:
+            switch style {
+            case .turtle: return L10n.text("蹭蹭你，就算额度不多也一直陪着你")
+            case .fox: return L10n.text("下巴搭在你手心，想从你这里充点电")
+            case .ghost: return L10n.text("冰凉凉地贴贴你，心里暖洋洋的")
+            default: return nil
+            }
+        case .greet:
+            switch style {
+            case .turtle: return L10n.text("揉揉眼睛，电量不多也要陪着你")
+            case .fox: return L10n.text("晃晃耳朵，今天也要照顾好自己哦")
+            case .ghost: return L10n.text("光芒微弱，但我一直都在呢")
+            default: return nil
+            }
+        case .play:
+            switch style {
+            case .turtle: return L10n.text("慢悠悠晃一下，省点电")
+            case .fox: return L10n.text("轻轻扑两下，力气留着下一次")
+            case .ghost: return L10n.text("星星有点暗，轻轻飘一下")
+            default: return nil
+            }
+        case .pickup:
+            return L10n.text("把我揣进兜里充会儿电吧")
+        case .land:
+            return L10n.text("轻轻趴下，休息一下好舒服")
+        default:
+            return nil
+        }
+    }
+    private func highQuotaCaption(for style: SidebarAppearance) -> String? {
+        switch self {
+        case .play:
+            switch style {
+            case .turtle: return L10n.text("电量超满，慢吞吞也是元气十足！")
+            case .fox: return L10n.text("尾巴摇成螺旋桨！快去探险！")
+            case .ghost: return L10n.text("能量满格，连幽灵尾巴都在发光！")
+            default: return nil
+            }
+        case .pet:
+            switch style {
+            case .turtle: return L10n.text("蹭蹭你！今天状态超级棒！")
+            case .fox: return L10n.text("咕噜咕噜~ 尾巴兴奋地拍打你的手！")
+            case .ghost: return L10n.text("绕着你的指尖欢快地转圈圈！")
+            default: return nil
+            }
+        case .greet:
+            switch style {
+            case .turtle: return L10n.text("抹茶小龟报到！今天精力充沛！")
+            case .fox: return L10n.text("枫糖小狐来啦！能量拉满，准备出发！")
+            case .ghost: return L10n.text("幽灵闪亮登场！能量像银河一样满！")
+            default: return nil
+            }
+        case .music:
+            switch style {
+            case .turtle: return L10n.text("欢快的旋律，连小龟壳都要跳起来了")
+            case .fox: return L10n.text("欢快打拍子，尾巴跳起欢送舞")
+            case .ghost: return L10n.text("大合奏响起来，星星都跟着跳舞啦")
+            default: return nil
+            }
+        case .snack:
+            switch style {
+            case .turtle: return L10n.text("大口嚼嫩叶，今天胃口特别好")
+            case .fox: return L10n.text("满满一大捧浆果，开心大餐！")
+            case .ghost: return L10n.text("满天星星糖，甜滋滋的一天！")
+            default: return nil
+            }
+        case .pickup:
+            return L10n.text("起飞咯！今天动力十足！")
+        case .land:
+            return L10n.text("超稳落地！接下来做什么？")
+        default:
+            return nil
+        }
+    }
+    private func defaultCaption(for style: SidebarAppearance) -> String {
         switch self {
         case .snack:
             switch style {
@@ -125,7 +225,7 @@ enum CompanionActivity: String, CaseIterable {
 struct CompanionActivitySequence {
     private var bag: [CompanionActivity] = []
     private(set) var previous: CompanionActivity?
-    mutating func next(style: SidebarAppearance = .panda, hour: Int = 12) -> CompanionActivity {
+    mutating func next(style: SidebarAppearance = .panda, hour: Int = 12, quota: Double? = nil) -> CompanionActivity {
         let next: CompanionActivity
         if previous == nil || previous == .hungry { next = .snack }
         else if previous == .sleep { next = .stretch }
@@ -134,24 +234,51 @@ struct CompanionActivitySequence {
             if bag.isEmpty {
                 bag = CompanionActivity.daily.shuffled()
                 let favorite: CompanionActivity
-                switch style {
-                case .panda, .bear: favorite = .snack
-                case .bunny, .fox: favorite = .play
-                case .turtle: favorite = .read
-                case .cat: favorite = .groom
-                case .penguin: favorite = .walk
-                case .ghost: favorite = .music
-                default: favorite = .look
+                if let quota {
+                    if quota <= 20 {
+                        favorite = .yawn
+                    } else if quota >= 80 {
+                        favorite = (style == .ghost ? .music : .play)
+                    } else {
+                        favorite = defaultFavorite(for: style)
+                    }
+                } else {
+                    favorite = defaultFavorite(for: style)
                 }
-                let first = hour >= 22 || hour < 7 ? CompanionActivity.yawn : favorite
+                let first = (hour >= 22 || hour < 7) ? CompanionActivity.yawn : favorite
                 bag.removeAll { $0 == first }; bag.append(first)
             }
-            if bag.last == previous { bag.swapAt(0, bag.count - 1) }
+            if let quota {
+                let preferred: Set<CompanionActivity>
+                if quota <= 20 {
+                    preferred = [.yawn, .hungry, .drink, .read]
+                } else if quota >= 80 {
+                    preferred = [.play, .music, .walk]
+                } else {
+                    preferred = []
+                }
+                if let index = bag.lastIndex(where: { preferred.contains($0) && $0 != previous }) {
+                    bag.swapAt(index, bag.count - 1)
+                }
+            }
+            if bag.last == previous, bag.count > 1 { bag.swapAt(0, bag.count - 1) }
             next = bag.removeLast()
         }
         bag.removeAll { $0 == next }
         previous = next
         return next
+    }
+
+    private func defaultFavorite(for style: SidebarAppearance) -> CompanionActivity {
+        switch style {
+        case .panda, .bear: return .snack
+        case .bunny, .fox: return .play
+        case .turtle: return .read
+        case .cat: return .groom
+        case .penguin: return .walk
+        case .ghost: return .music
+        default: return .look
+        }
     }
 }
 
@@ -219,7 +346,7 @@ struct CompanionPersonality {
         let style = emblem.appearance
         if lively?() == true, welcomed.insert(style).inserted { begin(.greet); return }
         var sequence = sequences[style] ?? CompanionActivitySequence()
-        let next = sequence.next(style: style, hour: Calendar.current.component(.hour, from: Date()))
+        let next = sequence.next(style: style, hour: Calendar.current.component(.hour, from: Date()), quota: emblem.remainingQuota)
         sequences[style] = sequence
         begin(next)
     }
@@ -231,7 +358,7 @@ struct CompanionPersonality {
         activity = next
         nextActivityAt = ProcessInfo.processInfo.systemUptime + next.duration + ([CompanionActivity.hungry, .yawn, .sleep].contains(next) ? 3 : (lively?() == true ? Double.random(in: 18...36) : Double.random(in: 35...65)))
         emblem.playActivity(next)
-        if let (anchor, screen) = location?() { showCaption(next.caption(for: emblem.appearance), anchor: anchor, screen: screen) }
+        if let (anchor, screen) = location?() { showCaption(next.caption(for: emblem.appearance, quota: emblem.remainingQuota), anchor: anchor, screen: screen) }
         // Text disappears first; the remaining gesture is quiet visual company.
         schedule(after: min(3.5, next.duration)) { life in
             life.bubble?.orderOut(nil)

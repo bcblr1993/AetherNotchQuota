@@ -11,7 +11,7 @@ enum SidebarAppearance: String, CaseIterable {
         guard let style = value.flatMap(Self.init(rawValue:)), selectable.contains(style) else { return .ghost }
         return style
     }
-    var isCharacter: Bool { Self.selectable.contains(self) }
+    var isCharacter: Bool { !([.capsule, .orb, .gauge].contains(self)) }
     var scale: CGFloat { isCharacter ? 2.25 : 1.5 }
     var accent: NSColor {
         switch self {
@@ -50,6 +50,7 @@ final class SidebarEmblem: CALayer {
     private var activityCleanup: DispatchWorkItem?
     private(set) var currentActivity: CompanionActivity?
     private(set) var appearance: SidebarAppearance = .ghost
+    private(set) var remainingQuota: Double?
     override init() { super.init(); bounds = CGRect(x: 0, y: 0, width: 36, height: 36) }
     override init(layer: Any) { super.init(layer: layer) }
     required init?(coder: NSCoder) { fatalError() }
@@ -118,6 +119,7 @@ final class SidebarEmblem: CALayer {
         rim.strokeColor = NSColor(white: 1, alpha: 0.25).cgColor; rim.lineWidth = 0.6; addSublayer(rim)
     }
     func update(remaining: Double?, scale: CGFloat) {
+        remainingQuota = remaining
         CATransaction.begin(); CATransaction.setDisableActions(true)
         let color = QuotaTint.color(remaining).cgColor
         indicator.fillColor = appearance == .gauge ? nil : color
