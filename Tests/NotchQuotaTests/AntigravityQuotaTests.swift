@@ -68,6 +68,26 @@ final class AntigravityQuotaTests: XCTestCase {
         XCTAssertTrue(QuotaParser.antigravityMissingGeminiModels(GeminiQuotaFixture.json(GeminiQuotaFixture.latestModels), summary: summary).isEmpty)
     }
 
+    func testNestedRemainingAndResetTimeParsing() {
+        let json: [String: Any] = [
+            "groups": [
+                [
+                    "displayName": "Claude and GPT models",
+                    "buckets": [
+                        [
+                            "displayName": "Weekly Limit Remaining",
+                            "window": "weekly",
+                            "remaining": ["remainingFraction": 0.84, "resetTime": "2030-01-08T00:00:00Z"]
+                        ]
+                    ]
+                ]
+            ]
+        ]
+        let snapshot = QuotaParser.antigravity(json)
+        XCTAssertEqual(snapshot.windows.first?.remaining, 84)
+        XCTAssertEqual(snapshot.windows.first?.reset, QuotaParser.date("2030-01-08T00:00:00Z"))
+    }
+
     func testPartialSummariesOnlySuppressTheirOwnPools() {
         let models = GeminiQuotaFixture.json(GeminiQuotaFixture.latestModels)
         let full = QuotaParser.antigravity(GeminiQuotaFixture.json(GeminiQuotaFixture.latestSummary))

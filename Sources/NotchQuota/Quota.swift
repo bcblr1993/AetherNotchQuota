@@ -96,7 +96,8 @@ enum QuotaParser {
                     let rawBucket = b["displayName"] as? String ?? b["window"] as? String ?? "额度"
                     let period = (b["window"] as? String ?? rawBucket).lowercased()
                     let bucket = period.contains("weekly") ? "每周" : (period == "5h" || period.contains("five")) ? "5 小时" : rawBucket
-                    rows.append(.init(id: "\(gi)-\(bi)", label: name.replacingOccurrences(of: " Models", with: "").replacingOccurrences(of: " models", with: "").replacingOccurrences(of: "Claude and GPT", with: "Claude / GPT") + " · " + bucket, remaining: percent(raw, fraction: true), reset: date(b["resetTime"])))
+                    let resetValue = b["resetTime"] ?? nested?["resetTime"] ?? b["resetsAt"] ?? nested?["resetsAt"]
+                    rows.append(.init(id: "\(gi)-\(bi)", label: name.replacingOccurrences(of: " Models", with: "").replacingOccurrences(of: " models", with: "").replacingOccurrences(of: "Claude and GPT", with: "Claude / GPT") + " · " + bucket, remaining: percent(raw, fraction: true), reset: date(resetValue)))
                 }
             }
         }
@@ -165,7 +166,7 @@ enum QuotaParser {
             let name = displayName.flatMap { $0.isEmpty ? nil : $0 } ?? fallback
             rows.append(.init(id: "gemini-model-" + id, label: name,
                               remaining: percent(quota["remainingFraction"], fraction: true),
-                              reset: date(quota["resetTime"])))
+                              reset: date(quota["resetTime"] ?? quota["resetsAt"])))
         }
         // Reasoning levels can share one pool. Collapse only when both quota and reset agree;
         // differing values must remain visible rather than being silently discarded.
