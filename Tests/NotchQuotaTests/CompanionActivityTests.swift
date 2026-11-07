@@ -171,6 +171,13 @@ final class CompanionActivityTests: XCTestCase {
         }
     }
     func testQuotaMoodCaptionsAdaptByRemainingQuotaLevel() {
+        // Pin this test's language in memory without changing saved user preferences.
+        let defaults = AppLanguage.defaults
+        let originalArguments = defaults.volatileDomain(forName: UserDefaults.argumentDomain)
+        var arguments = originalArguments
+        arguments[AppLanguage.preferenceKey] = AppLanguage.simplifiedChinese.rawValue
+        defaults.setVolatileDomain(arguments, forName: UserDefaults.argumentDomain)
+        defer { defaults.setVolatileDomain(originalArguments, forName: UserDefaults.argumentDomain) }
         // High Quota (>= 80%)
         XCTAssertEqual(CompanionActivity.play.caption(for: .turtle, quota: 95), "电量超满，慢吞吞也是元气十足！")
         XCTAssertEqual(CompanionActivity.play.caption(for: .fox, quota: 85), "尾巴摇成螺旋桨！快去探险！")
