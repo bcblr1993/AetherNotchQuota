@@ -50,6 +50,39 @@ private enum GeminiQuotaFixture {
 }
 
 final class AntigravityQuotaTests: XCTestCase {
+    // Synthetic payload using the labels in the updated Google usage panel.
+    func testShortUsageLabelsKeepBothPoolsAndResetTimes() {
+        let data = GeminiQuotaFixture.json(#"""
+        {"response":{"groups":[
+          {"displayName":"Gemini Models","buckets":[
+            {"displayName":"Weekly limit","remainingFraction":0.71,"resetTime":"2030-01-08T00:00:00Z"},
+            {"displayName":"5h limit","remaining":{"remainingFraction":0.15,"resetsAt":"2030-01-01T05:00:00Z"}}]},
+          {"displayName":"Claude and GPT models","buckets":[
+            {"displayName":"Weekly limit","remainingFraction":1},
+            {"displayName":"5h limit","remainingFraction":1}]}]}}
+        """#)
+        let snapshot = QuotaParser.antigravity(data)
+        XCTAssertEqual(snapshot.windows.map(\.label), ["Gemini · 每周", "Gemini · 5 小时", "Claude / GPT · 每周", "Claude / GPT · 5 小时"])
+        XCTAssertEqual(snapshot.windows.map(\.remaining), [71, 15, 100, 100])
+        XCTAssertEqual(snapshot.windows[0].reset, QuotaParser.date("2030-01-08T00:00:00Z"))
+        XCTAssertEqual(snapshot.windows[1].reset, QuotaParser.date("2030-01-01T05:00:00Z"))
+        XCTAssertNil(snapshot.windows[2].reset)
+        XCTAssertEqual(QuotaSummary(snapshot.windows).fiveHour?.remaining, 15)
+    }
+
+    func testHourLabelsDoNotMisclassifyOtherDurationsOrUnknownQuota() {
+        for label in ["5h", "5h limit", "5 hour limit", "Five Hour Limit Remaining", "five-hour limit"] {
+            let snapshot = QuotaParser.antigravity(["groups": [["displayName": "Gemini Models", "buckets": [["displayName": label], ["displayName": label, "remainingFraction": 0]]]]])
+            XCTAssertEqual(snapshot.windows.map(\.label), ["Gemini · 5 小时", "Gemini · 5 小时"])
+            XCTAssertNil(snapshot.windows[0].remaining)
+            XCTAssertEqual(snapshot.windows[1].remaining, 0)
+        }
+        for label in ["15h limit", "25h", "fifteen hours", "five models"] {
+            let snapshot = QuotaParser.antigravity(["groups": [["displayName": "Gemini Models", "buckets": [["displayName": label]]]]])
+            XCTAssertEqual(snapshot.windows.first?.label, "Gemini · " + label)
+        }
+    }
+
     func testClientIdentityTracksInstalledVersionWithoutInventingHubForLegacyApps() {
         let hub = Data("'--subclient_type', 'hub'".utf8)
         XCTAssertEqual(Installation.antigravityUserAgent(from: hub, version: "2.24.0"), "antigravity/hub/2.24.0 (os_type=darwin; arch=arm64)")
