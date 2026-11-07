@@ -1,6 +1,6 @@
 # 架构
 
-单个 Swift Package 可执行目标 `NotchQuota`，无第三方包依赖。
+单个 Swift Package 可执行目标 `NotchQuota`，仅依赖 Sparkle 原生更新组件。
 
 - `main.swift`：应用生命周期、屏幕定位、15 秒单次定时器、应用内悬停、三分钟刷新与菜单。
 - `Interface.swift`：AppKit 绘制、原生图标按钮、窗口展开与额度颜色。
@@ -27,3 +27,10 @@
 新 Antigravity 服务地址必须经审核再加入白名单。不得为“看起来能用”而回退到不同服务环境，因为不同环境可能都返回 200，但返回不同额度池。
 
 `LaunchAtLogin.swift` 使用 macOS 13+ 的 `SMAppService.mainApp` 注册/取消登录项，只有用户点击菜单或显式维护命令时才更改；菜单每次打开读取系统状态。不会安装 LaunchAgent 或常驻 helper。
+
+## 当前开发版新增模块
+
+- `SoftCompanion`：生产侧栏使用的原绘本插画与有限、柔和的关键帧动作。旧 `CompanionCharacter` / `CompanionPuppet` 不再用于生产侧栏。`CompanionPreview` 通过 `--companion-preview --companion-interactions` 生成实际图层的 GIF 与关键帧，不读取登录或设置。
+- `Preferences`：原生 SwiftUI 设置窗口，调用现有账号和展示动作，保留旧偏好。
+- `QuotaNotifications`：仅成功刷新后消费快照；首次基线不通知，账号独立，旧数据跳过。通知需用户开启和系统许可；去重摘要与偏好本地保存，不保存凭据。
+- `RefreshBackoff`：每个查询目标的失败退避，成功清零，429 尊重服务 Retry-After；轮换仍只读缓存。

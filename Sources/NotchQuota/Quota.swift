@@ -32,11 +32,13 @@ struct Snapshot: Codable {
 }
 enum QuotaError: LocalizedError {
     case message(String)
+    case rateLimited(TimeInterval)
     case accountChanged
     case identityUnverified
     var errorDescription: String? {
         switch self {
         case .message(let value): return value
+        case .rateLimited: return "请求过于频繁，稍后自动重试"
         case .accountChanged: return "账号已变化，请在菜单重新勾选确认"
         case .identityUnverified: return "暂时无法核对账号身份，请稍后刷新"
         }

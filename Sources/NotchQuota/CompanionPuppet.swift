@@ -13,6 +13,8 @@ final class CompanionPuppet: CALayer {
         guard style.isCharacter else { return nil }
         let puppet = CompanionPuppet(); puppet.companionStyle = style
         puppet.character = CompanionCharacter(style: style)
+        // Tall fox ears must fit the docked 40-point canvas, including its lean.
+        if style == .fox { puppet.character.root.transform = CATransform3DMakeScale(0.9, 0.9, 1) }
         puppet.addSublayer(puppet.character.shadow); puppet.addSublayer(puppet.character.root)
         return puppet
     }
@@ -20,10 +22,9 @@ final class CompanionPuppet: CALayer {
         func clear(_ layer: CALayer) { layer.removeAllAnimations(); layer.sublayers?.forEach(clear) }
         clear(self)
     }
-    func play(_ activity: CompanionActivity) {
-        stop()
+    private var bindings: [(String, CALayer, String)] {
         let c = character!
-        let bindings: [(String, CALayer, String)] = [
+        return [
             ("x", c.root, "transform.translation.x"), ("y", c.root, "transform.translation.y"),
             ("lean", c.root, "transform.rotation.z"), ("squash", c.torso, "transform.scale.y"),
             ("head", c.head, "transform.rotation.z"), ("headY", c.head, "transform.translation.y"),
@@ -34,15 +35,31 @@ final class CompanionPuppet: CALayer {
             ("footRY", c.rightFoot, "transform.translation.y"), ("armL", c.left, "transform.rotation.z"),
             ("armR", c.right, "transform.rotation.z"), ("elbowL", c.left.forearm, "transform.rotation.z"),
             ("elbowR", c.right.forearm, "transform.rotation.z"), ("wrist", c.right.grip, "transform.rotation.z"),
-            ("eyes", c.leftEye, "transform.scale.y"), ("eyes", c.rightEye, "transform.scale.y"),
+            ("eyes", c.leftEye, "transform.scale.y"), ("eyesR", c.rightEye, "transform.scale.y"),
             ("eyeX", c.leftEye, "transform.translation.x"), ("eyeX", c.rightEye, "transform.translation.x"),
             ("mouth", c.mouth, "transform.scale.y"), ("cup", c.cup, "opacity"), ("food", c.food, "opacity"),
             ("foodScale", c.food, "transform.scale"), ("headset", c.headphones, "opacity"),
             ("headsetY", c.headphones, "transform.translation.y"), ("book", c.book, "opacity"),
             ("page", c.page, "transform.scale.x"), ("toy", c.toy, "opacity"),
             ("toyX", c.toy, "transform.translation.x"), ("toyY", c.toy, "transform.translation.y"),
-            ("toySpin", c.toy, "transform.rotation.z"), ("shadow", c.shadow, "transform.scale.x")
+            ("toySpin", c.toy, "transform.rotation.z"),
+            ("heart", c.heart, "opacity"), ("heartY", c.heart, "transform.translation.y"),
+            ("sparkle", c.sparkle, "opacity"), ("sparkleSpin", c.sparkle, "transform.rotation.z"),
+            ("shadow", c.shadow, "transform.scale.x")
         ]
+    }
+    /// Offline QA samples the very same channels as playback, without wall-clock drift.
+    func renderPose(_ activity: CompanionActivity, progress: Double) {
+        stop()
+        let values = pose(activity, progress: progress)
+        CATransaction.begin(); CATransaction.setDisableActions(true)
+        for (channel, layer, path) in bindings {
+            layer.setValue(values[channel] ?? (Self.unitChannels.contains(channel) ? 1.0 : 0.0), forKeyPath: path)
+        }
+        CATransaction.commit()
+    }
+    func play(_ activity: CompanionActivity) {
+        stop()
         let frames = Int(activity.duration * 24)
         let poses = (0...frames).map { pose(activity, progress: Double($0) / Double(frames)) }
         let begin = CACurrentMediaTime()
@@ -56,7 +73,7 @@ final class CompanionPuppet: CALayer {
             layer.add(animation, forKey: "joint." + path)
         }
     }
-    private static let unitChannels: Set<String> = ["squash", "headScale", "eyes", "mouth", "foodScale", "page", "shadow"]
+    private static let unitChannels: Set<String> = ["squash", "headScale", "eyes", "eyesR", "mouth", "foodScale", "page", "shadow"]
 
     /// Pure scene sampling also lets tests check contact, continuity and recovery.
     func pose(_ activity: CompanionActivity, progress t: Double) -> [String: Double] {
@@ -208,29 +225,61 @@ final class CompanionPuppet: CALayer {
             p["toy"] = e
             switch style {
             case .turtle:
-                // Turtle playfully nudges a floating fresh leaf
-                p["toyX"] = -4 * e
-                p["toyY"] = e * (2 + wave(1) * 1.5)
-                p["headY"] = -e * 1.2
-                p["head"] = -e * 0.12
-                p["armR"] = e * 0.5
+                // Notice the leaf, stretch to balance it, wobble, then proudly bow.
+                let reach = hold(0.12, 0.30, 0.58, 0.78)
+                let balance = hold(0.32, 0.43, 0.61, 0.76)
+                let wobble = sin((t - 0.35) * .pi * 8) * balance
+                p["toyX"] = -10 * e + wobble * 1.2
+                p["toyY"] = 27 * reach + 2 * e
+                p["toySpin"] = wobble * 0.24
+                p["headY"] = reach * 2.5
+                p["headScale"] = 1 + reach * 0.08
+                p["head"] = wobble * 0.10
+                p["eyeX"] = reach * 0.6
+                p["armL"] = -balance * 0.55; p["armR"] = balance * 0.55
+                p["lean"] = -wobble * 0.045
+                p["sparkle"] = hold(0.72, 0.79, 0.84, 0.94)
+                p["headY", default: 0] -= hold(0.76, 0.83, 0.88, 0.98) * 1.2
             case .fox:
-                // Fox pounces and bats at a fluttering red maple leaf
-                p["toyX"] = e * (-10 + 7 * wave(1))
-                p["toyY"] = e * (15 + 3 * wave(2))
-                p["toySpin"] = t * .pi * 3 * e
-                p["head"] = -e * wave(1) * 0.22
-                p["armR"] = e * (1.1 + beat * 0.5)
-                p["tail"] = e * wave(3.2) * 0.55 // Excited rapid tail wagging
+                // Eyes lead the falling leaf; crouch -> pounce -> soft landing -> wink.
+                let crouch = hold(0.12, 0.24, 0.28, 0.38)
+                let leap = max(0, sin(min(1, max(0, (t - 0.30) / 0.32)) * .pi))
+                let land = hold(0.59, 0.64, 0.66, 0.76)
+                let proud = hold(0.73, 0.80, 0.88, 0.98)
+                p["toyX"] = e * (-12 + 5 * sin(t * .pi * 2))
+                p["toyY"] = e * (20 - 16 * rise(0.22, 0.64))
+                p["toySpin"] = e * sin(t * .pi * 4) * 0.7
+                p["eyeX"] = -e * 0.85
+                p["headY"] = -crouch * 1.6 - land * 1.2
+                p["squash"] = 1 - crouch * 0.18 + leap * 0.10 - land * 0.16
+                p["y"] = leap * 4.2
+                p["x"] = -leap * 2.2
+                p["lean"] = -leap * 0.14
+                p["armL"] = -leap * 1.1; p["armR"] = leap * 1.1
+                p["footL"] = -leap * 0.5; p["footR"] = leap * 0.5
+                p["earL"] = -crouch * 0.35 - leap * 0.2
+                p["earR"] = crouch * 0.35 - leap * 0.2
+                p["tail"] = e * sin(t * .pi * 6) * 0.45 + leap * 0.4
+                p["eyesR"] = 1 - proud * 0.94
+                p["head"] = proud * 0.14
+                p["sparkle"] = proud
             case .ghost:
-                // Ghost plays with a glowing golden star candy
-                p["toyX"] = e * (-10 + 8 * wave(1))
-                p["toyY"] = e * (17 + 3 * wave(2))
-                p["toySpin"] = wave(1) * e
-                p["y"] = e * (1.2 + wave(2) * 1.2)
-                p["squash"] = 1 + e * wave(2) * 0.08
-                p["armL"] = -e * 1.2; p["armR"] = e * 1.2
-                p["head"] = e * wave(2) * 0.12
+                // A star escapes the hug, loops overhead, then settles into both hands.
+                let chase = hold(0.12, 0.28, 0.55, 0.70)
+                let hug = hold(0.62, 0.76, 0.86, 0.98)
+                p["toyX"] = -10 * e + sin(t * .pi * 3) * chase * 8
+                p["toyY"] = e * 14 + chase * 10 - hug * 3
+                p["toySpin"] = chase * sin(t * .pi * 4)
+                p["y"] = e * 1.2 + chase * (1.8 + sin(t * .pi * 4))
+                p["squash"] = 1 + chase * sin(t * .pi * 4) * 0.10 - hug * 0.08
+                p["lean"] = -chase * sin(t * .pi * 3) * 0.12
+                p["eyeX"] = chase * sin(t * .pi * 3) * 0.8
+                hands(CGPoint(x: 14, y: 17), CGPoint(x: 22, y: 17), hug)
+                p["armL", default: 0] -= chase * 1.2
+                p["armR", default: 0] += chase * 1.2
+                p["eyes"] = 1 - hug * 0.85
+                p["heart"] = hug
+                p["heartY"] = hug * 2
             case .panda:
                 p["toyX"] = -8 * e; p["toyY"] = e * (11 + beat); p["toySpin"] = e * beat * 0.3
                 hands(CGPoint(x: 15, y: 16), CGPoint(x: 24, y: 17), e); p["head"] = e * beat * 0.1
@@ -336,6 +385,13 @@ final class CompanionPuppet: CALayer {
                 p["tail"] = settle * 0.25
             }
         }
+        if activity == .pet {
+            let affection = hold(0.22, 0.38, 0.64, 0.96)
+            p["heart"] = affection
+            p["heartY"] = affection * (1 + 3 * rise(0.3, 0.9))
+        }
+        if p["eyesR"] == nil { p["eyesR"] = p["eyes"] }
+        p["sparkleSpin"] = (p["sparkle"] ?? 0) * 0.35
         p["shadow"] = 1 - max(0, p["y"] ?? 0) * 0.06
         return p
     }

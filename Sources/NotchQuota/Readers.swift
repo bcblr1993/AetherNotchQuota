@@ -65,7 +65,7 @@ actor QuotaReader {
             switch code {
             case 403 where response.mimeType == "text/html": throw QuotaError.message("服务要求网页验证，请在 Claude 中完成验证")
             case 401, 403: throw QuotaError.message("登录已过期或无权限，请在原应用重新登录")
-            case 429: throw QuotaError.message("请求过于频繁，稍后自动重试")
+            case 429: throw QuotaError.rateLimited(RefreshBackoff.retryDelay((response as? HTTPURLResponse)?.value(forHTTPHeaderField: "Retry-After")))
             default: throw QuotaError.message("额度服务暂不可用（\(code)）")
             }
         }
@@ -112,6 +112,7 @@ actor QuotaReader {
             req.setValue(tokens["account_id"] as? String, forHTTPHeaderField: "ChatGPT-Account-Id")
             let (responseData, response) = try await remote.data(for: req)
             let status = (response as? HTTPURLResponse)?.statusCode ?? 0
+            if status == 429 { throw QuotaError.rateLimited(RefreshBackoff.retryDelay((response as? HTTPURLResponse)?.value(forHTTPHeaderField: "Retry-After"))) }
             if status == 401 && attempt == 0 { try CodexSession.refresh(); continue }
             guard status == 200 else { throw QuotaError.message(status == 401 ? "Codex 登录已失效，请重新登录" : "Codex 额度服务暂不可用（\(status)）") }
             return QuotaParser.codex(try json(responseData))

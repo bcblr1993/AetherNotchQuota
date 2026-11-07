@@ -321,3 +321,53 @@
 "满天星星糖，甜滋滋的一天！" = "A sky full of star candies, such a sweet day!";
 "起飞咯！今天动力十足！" = "Lift off! Full power ahead today!";
 "超稳落地！接下来做什么？" = "Super smooth landing! What shall we do next?";
+
+"偏好设置…" = "Preferences…";
+
+"外观与伙伴" = "Appearance & companion";
+
+"额度提醒" = "Quota alerts";
+
+"更新与诊断" = "Updates & diagnostics";
+
+"显示方式" = "Display mode";
+
+"拖离屏幕边缘后，单击摸摸，双击查看额度。小龟慢慢探头、小狐轻轻蹭蹭、小幽灵害羞团团。" = "Drag away from the edge: click to pet, double-click for quota. Turtle peeks, fox nuzzles, ghost curls up shyly.";
+
+"选择需要显示和查询的账号；额外实例默认关闭。" = "Choose accounts to display and refresh. Additional instances start disabled.";
+
+"启用系统额度通知" = "Enable system quota notifications";
+
+"首次读取不提醒；只使用成功刷新的额度，同一周期去重，不额外查询。" = "No alerts on first reading. Uses successful refreshes, deduplicates within a cycle, and makes no extra requests.";
+
+"低额度阈值" = "Low quota threshold";
+
+"额度恢复至 100% 时通知" = "Notify when quota returns to 100%";
+
+"安静时段" = "Quiet hours";
+
+"开始" = "From";
+
+"结束" = "Until";
+
+"通知已开启" = "Notifications enabled";
+
+"请在系统设置中允许通知" = "Allow notifications in System Settings";
+
+"无法开启通知，请稍后重试" = "Could not enable notifications. Try again later.";
+
+"诊断摘要仅包含版本、显示模式和请求状态，不包含账号名称、凭据、路径或接口响应。" = "The summary includes version, display mode, and request status only. No account names, credentials, paths, or response payloads.";
+
+"预览诊断摘要" = "Preview diagnostic summary";
+
+"复制摘要" = "Copy summary";
+
+"{0}已恢复至 100%" = "{0} is back to 100%";
+
+"{0}剩余 {1}%" = "{0}: {1}% remaining";
+
+"悄悄往你这边蹭一蹭" = "A little nuzzle, just for you";
+
+"慢慢探出来，看看你" = "Peeking out slowly to see you";
+
+"害羞地团一下，再探出头" = "A shy little tuck, then a peek";

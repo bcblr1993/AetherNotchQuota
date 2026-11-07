@@ -58,10 +58,12 @@ extension AppDelegate {
         return visibleTargets[(index + 1) % visibleTargets.count]
     }
     func invalidateAccount(_ candidate: QuotaTarget) {
+        if !demo, !testMode { quotaNotifications.forget(account: candidate.id) }
         accountGenerations[candidate.id, default: 0] += 1
         refreshJobs[candidate.id]?.cancel(); refreshJobs[candidate.id] = nil
         states[candidate]?.loading = false
         lastAttempt[candidate] = nil
+        refreshBackoff[candidate.id] = nil
     }
     @objc func scanInstances() {
         guard !demo, !testMode, discoveryJob == nil else { return }
