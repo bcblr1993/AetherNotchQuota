@@ -3,6 +3,29 @@ import AppKit
 @testable import NotchQuota
 
 final class CompanionActivityTests: XCTestCase {
+    func testProductionUsesTexturedArtAndGentleFiniteMotion() throws {
+        for style in SidebarAppearance.selectable {
+            let emblem = SidebarEmblem(); emblem.configure(style)
+            let actor = try XCTUnwrap(emblem.sublayers?.compactMap { $0 as? SoftCompanion }.first)
+            XCTAssertNotNil(actor.artwork.contents)
+            for activity in CompanionActivity.allCases {
+                for time in [0.0, 1.0] {
+                    for (channel, value) in actor.pose(activity, progress: time) {
+                        XCTAssertEqual(value, SoftCompanion.neutral(channel), accuracy: 0.00001)
+                    }
+                }
+                for sample in 0...100 {
+                    let pose = actor.pose(activity, progress: Double(sample) / 100)
+                    XCTAssertTrue(pose.values.allSatisfy { $0.isFinite })
+                    XCTAssertLessThanOrEqual(abs(pose["tilt"] ?? 0), 0.08)
+                    XCTAssertTrue((0.89...1.07).contains(pose["sy"] ?? 1))
+                }
+                actor.play(activity); actor.stop()
+                XCTAssertTrue(actor.sublayers?.allSatisfy { $0.animationKeys()?.isEmpty != false } == true)
+            }
+            XCTAssertNotEqual(actor.pose(.play, progress: 0.3), actor.pose(.play, progress: 0.67))
+        }
+    }
     func testEveryCharacterHasRealJointsAndHeldObjectsRatherThanChangingIcons() throws {
         func descendants(_ layer: CALayer) -> [CALayer] { [layer] + (layer.sublayers ?? []).flatMap(descendants) }
         for style in SidebarAppearance.selectable {
@@ -30,7 +53,7 @@ final class CompanionActivityTests: XCTestCase {
         }
     }
     func testEverySceneRecoversAndEverySpeciesHasDistinctMotion() throws {
-        let unit: Set<String> = ["squash", "headScale", "eyes", "mouth", "foodScale", "page", "shadow"]
+        let unit: Set<String> = ["squash", "headScale", "eyes", "eyesR", "mouth", "foodScale", "page", "shadow"]
         for activity in CompanionActivity.allCases {
             var signatures = Set<String>()
             for style in SidebarAppearance.selectable {
@@ -164,8 +187,8 @@ final class CompanionActivityTests: XCTestCase {
 
         // Normal Quota (20% - 80%) & Unknown (nil)
         XCTAssertEqual(CompanionActivity.sleep.caption(for: .turtle, quota: 50), "缩回壳边，慢慢入睡")
-        XCTAssertEqual(CompanionActivity.play.caption(for: .fox, quota: 60), "追一片小枫叶")
-        XCTAssertEqual(CompanionActivity.play.caption(for: .ghost, quota: nil), "接住一颗小星星")
+        XCTAssertEqual(CompanionActivity.play.caption(for: .fox, quota: 60), "悄悄往你这边蹭一蹭")
+        XCTAssertEqual(CompanionActivity.play.caption(for: .ghost, quota: nil), "害羞地团一下，再探出头")
 
         // Localization completeness across all languages
         let testKeys = [

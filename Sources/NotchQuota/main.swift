@@ -1,8 +1,9 @@
 import AppKit
 import QuartzCore
+import SwiftUI
 
 @MainActor
-final class AppDelegate: NSObject, NSApplicationDelegate {
+final class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
     var panel: NotchPanel!
     var quotaView: QuotaView!
     var target: QuotaTarget = .codex
@@ -33,6 +34,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     let overviewModel = OverviewModel()
     var overviewTimer: Timer?
     var sidebar: SidebarController?
+    var settingsWindow: NSWindow?
+    lazy var quotaNotifications = QuotaNotifications()
+    var notificationStatus = ""
 
     var detectedApps: [Provider] = []
     var excludedProviders: Set<Provider> = []
@@ -44,6 +48,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
     var states: [QuotaTarget: DisplayState] = [:]
     var lastAttempt: [QuotaTarget: Date] = [:]
+    var refreshBackoff: [String: RefreshBackoff] = [:]
     let reader = QuotaReader()
     let appUpdates = AppUpdates()
     var idle = IdleState()
@@ -197,6 +202,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         updateView()
     }
     func updateView(animated: Bool = false) {
+        if settingsWindow?.isVisible == true { objectWillChange.send() }
         if displayMode == .sidebar { updateSidebar(); return }
         if displayMode == .menuBar { updateMenuBarPresentation(); return }
         quotaView.provider = provider
@@ -327,6 +333,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func refresh(_ candidate: QuotaTarget, force: Bool = false) {
         guard !refreshSuspended, visibleTargets.contains(candidate), !demo, !testMode, states[candidate]?.loading != true else { return }
         if !force, let last = lastAttempt[candidate], Date().timeIntervalSince(last) < 30 { return }
+        guard refreshBackoff[candidate.id]?.allows(Date()) != false else { return }
         lastAttempt[candidate] = Date()
         var state = states[candidate] ?? DisplayState(); state.loading = true; states[candidate] = state
         if candidate == target || displayMode != .island { updateView(animated: true) }
@@ -354,7 +361,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 }
                 let restored = QuotaRecoveryDetector.restoredWindows(
                     previous: self.states[candidate]?.snapshot, current: snapshot)
+                self.refreshBackoff[candidate.id]?.succeeded()
                 self.states[candidate] = DisplayState(snapshot: snapshot)
+                if !self.refreshSuspended && !self.temporarilyHidden {
+                    self.quotaNotifications.observe(snapshot, account: candidate.id, title: self.accountLabel(candidate))
+                }
                 if candidate == self.target || self.displayMode != .island { self.updateView(animated: true) }
                 if !restored.isEmpty, self.displayMode == .sidebar {
                     self.sidebar?.showQuotaRecovery(accountID: candidate.id, windows: restored)
@@ -371,6 +382,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 if case QuotaError.identityUnverified = error {
                     self.states[candidate] = DisplayState(); self.accountNames[candidate.id] = nil; self.accountAvatars[candidate.id] = nil
                 }
+                let retryAfter: TimeInterval?
+                if case QuotaError.rateLimited(let delay) = error { retryAfter = delay } else { retryAfter = nil }
+                self.refreshBackoff[candidate.id, default: RefreshBackoff()].failed(now: Date(), retryAfter: retryAfter)
                 var failed = self.states[candidate] ?? DisplayState(); failed.loading = false; failed.error = self.readableError(error); self.states[candidate] = failed
                 if candidate == self.target || self.displayMode != .island { self.updateView(animated: true) }
                 if candidate.provider == .antigravity, let identity = await accountReader.accountIdentity(),
@@ -414,6 +428,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func makeMenu() -> NSMenu {
         let menu = NSMenu(); menu.autoenablesItems = false; menu.minimumWidth = 210
         appendTemporaryVisibilityMenu(to: menu)
+        let preferences = NSMenuItem(title: L10n.text("偏好设置…"), action: #selector(openPreferences), keyEquivalent: ",")
+        preferences.target = self; menu.addItem(preferences)
         let refresh = NSMenuItem(title: L10n.text("刷新额度"), action: #selector(manualRefresh), keyEquivalent: "r"); refresh.target = self; menu.addItem(refresh)
         let hide = NSMenuItem(title: L10n.text("收起详情"), action: #selector(manualRest), keyEquivalent: "h"); hide.target = self; hide.isEnabled = !temporarilyHidden
         if quotaView?.expanded == true && !temporarilyHidden { menu.addItem(hide) }
@@ -545,7 +561,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         func capture(_ name: String, view: NSView? = nil) {
             let view = view ?? quotaView!
             guard let rep = view.bitmapImageRepForCachingDisplay(in: view.bounds) else { return }
-            view.cacheDisplay(in: view.bounds, to: rep)
+            view.effectiveAppearance.performAsCurrentDrawingAppearance {
+                view.cacheDisplay(in: view.bounds, to: rep)
+            }
             if let data = rep.representation(using: .png, properties: [:]) { try? data.write(to: URL(fileURLWithPath: base).appendingPathComponent(name + ".png")) }
         }
         suppressMotion = true
@@ -722,6 +740,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             check(!panel.isVisible && quotaStatusItem != nil && hiddenUntil == nil, "restoring menu mode never opens notch")
             setDisplayMode(.island); await settle()
             check(panel.isVisible && quotaStatusItem == nil && overviewTimer == nil, "switching back restores island without duplicate entry")
+            openPreferences(); await settle()
+            check(settingsWindow?.isVisible == true, "native preferences opens")
+            for tab in 0..<4 {
+                settingsWindow?.contentView = NSHostingView(rootView: PreferencesView(app: self, selectedTab: tab))
+                await settle()
+                if let content = settingsWindow?.contentView { capture("preferences-\(tab)", view: content) }
+            }
+            setDisplayMode(.sidebar)
+            settingsWindow?.contentView = NSHostingView(rootView: PreferencesView(app: self))
+            await settle()
+            if let content = settingsWindow?.contentView { capture("preferences-companion", view: content) }
+            settingsWindow?.orderOut(nil)
+            sidebar?.hide()
             print("Compact: \(cameraWidth + (cameraWidth > 0 ? 94 : 100)) × \(topHeight)")
             fflush(stdout)
             exit(failures == 0 ? 0 : 1)
@@ -729,7 +760,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 }
 
-if CommandLine.arguments.contains("--verify-accounts") {
+if CommandLine.arguments.contains("--companion-preview") {
+    MainActor.assumeIsolated {
+        _ = NSApplication.shared
+        NSApp.setActivationPolicy(.accessory)
+        Task { await CompanionPreview.run() }
+        NSApp.run()
+    }
+} else if CommandLine.arguments.contains("--verify-accounts") {
     Task {
         let primary = await MainActor.run { Installation.app("Antigravity") }
         let extras = await AntigravityDiscovery().discover(primary: primary, manual: [])

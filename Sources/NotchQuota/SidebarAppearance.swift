@@ -96,7 +96,7 @@ final class SidebarEmblem: CALayer {
             let mark = CAShapeLayer(); mark.path = spark; mark.fillColor = NSColor(white: 0.96, alpha: 1).cgColor
             addSublayer(mark); addSublayer(valueLabel)
         case .ghost, .bunny, .bear, .cloud, .cat, .fox, .panda, .penguin, .turtle:
-            let character = SidebarMascotArtwork.make(style: style)
+            let character: CALayer = SoftCompanion(style: style)
             character.bounds = bounds
             character.anchorPoint = CGPoint(x: 27.0 / 36, y: 13.0 / 36)
             character.position = CGPoint(x: 27, y: 13)
@@ -134,7 +134,7 @@ final class SidebarEmblem: CALayer {
         activityCleanup?.cancel(); activityCleanup = nil; currentActivity = nil
         activityProps?.removeFromSuperlayer(); activityProps = nil
         activityFace?.removeFromSuperlayer(); activityFace = nil
-        (leaningBody as? CompanionPuppet)?.stop()
+        (leaningBody as? SoftCompanion)?.stop()
         removeAllAnimations(); leaningBody?.removeAllAnimations(); confetti.removeAllAnimations()
     }
     var hasMotion: Bool { currentActivity != nil || animationKeys()?.isEmpty == false || leaningBody?.animationKeys()?.isEmpty == false || confetti.animationKeys()?.isEmpty == false }
@@ -184,7 +184,7 @@ final class SidebarEmblem: CALayer {
     func playActivity(_ activity: CompanionActivity) {
         guard appearance.isCharacter, let character = leaningBody else { return }
         stopMotion(); currentActivity = activity
-        if let puppet = character as? CompanionPuppet {
+        if let puppet = character as? SoftCompanion {
             puppet.play(activity)
         } else {
             playStorybookActivity(activity, for: character)

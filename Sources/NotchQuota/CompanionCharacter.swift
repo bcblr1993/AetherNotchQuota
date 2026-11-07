@@ -38,7 +38,7 @@ final class CompanionCharacter {
     let left = CompanionLimb(), right = CompanionLimb()
     let leftEye = CALayer(), rightEye = CALayer(), mouth = CALayer()
     let cup = CALayer(), food = CALayer(), headphones = CALayer(), book = CALayer(), toy = CALayer()
-    let page = CALayer(), shadow = CALayer()
+    let page = CALayer(), shadow = CALayer(), heart = CALayer(), sparkle = CALayer()
     let style: SidebarAppearance
     var floating: Bool { style == .ghost || style == .cloud }
     var fur: NSColor {
@@ -221,6 +221,17 @@ final class CompanionCharacter {
         right.configure(at: CGPoint(x: 26.3, y: 15), color: paw, flipper: false)
         root.addSublayer(left); root.addSublayer(right)
         makeProps()
+        // Small finite scene accents, hidden in the model layer at rest.
+        heart.name = "affection"; heart.position = CGPoint(x: 29, y: 34); heart.opacity = 0
+        let heartPath = CGMutablePath()
+        heartPath.move(to: CGPoint(x: 0, y: -2.3))
+        heartPath.addCurve(to: CGPoint(x: 0, y: 1.7), control1: CGPoint(x: -6, y: 1), control2: CGPoint(x: -2.8, y: 5))
+        heartPath.addCurve(to: CGPoint(x: 0, y: -2.3), control1: CGPoint(x: 2.8, y: 5), control2: CGPoint(x: 6, y: 1))
+        d.shape(heartPath, d.blush, in: heart)
+        root.addSublayer(heart)
+        sparkle.name = "delight"; sparkle.position = CGPoint(x: 6, y: 33); sparkle.opacity = 0
+        SidebarMascotArtwork.star(at: .zero, radius: 2.5, color: d.color(0xF2C567), in: sparkle)
+        root.addSublayer(sparkle)
     }
     private func makeProps() {
         let d = CompanionDrawing.self

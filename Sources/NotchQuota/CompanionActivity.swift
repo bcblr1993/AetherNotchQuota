@@ -208,9 +208,9 @@ enum CompanionActivity: String, CaseIterable {
             switch style {
             case .panda: return L10n.text("竹叶也会跳舞")
             case .bunny: return L10n.text("蹦一下，再蹦一下")
-            case .fox: return L10n.text("追一片小枫叶")
-            case .turtle: return L10n.text("慢一点，也很开心")
-            case .ghost: return L10n.text("接住一颗小星星")
+            case .fox: return L10n.text("悄悄往你这边蹭一蹭")
+            case .turtle: return L10n.text("慢慢探出来，看看你")
+            case .ghost: return L10n.text("害羞地团一下，再探出头")
             case .cloud: return L10n.text("把星星轻轻举高")
             case .bear: return L10n.text("抱抱今天的好心情")
             case .cat: return L10n.text("毛线球，别跑呀")
