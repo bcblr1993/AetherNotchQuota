@@ -97,7 +97,8 @@ enum QuotaParser {
                     let raw = b["remainingFraction"] ?? nested?["remainingFraction"]
                     let rawBucket = b["displayName"] as? String ?? b["window"] as? String ?? "额度"
                     let period = (b["window"] as? String ?? rawBucket).lowercased()
-                    let bucket = period.contains("weekly") ? "每周" : (period == "5h" || period.contains("five")) ? "5 小时" : rawBucket
+                    let fiveHour = period.range(of: #"\b(?:5\s*h(?:ours?)?|five[ -]+hours?)\b"#, options: .regularExpression) != nil
+                    let bucket = period.contains("weekly") ? "每周" : fiveHour ? "5 小时" : rawBucket
                     let resetValue = b["resetTime"] ?? nested?["resetTime"] ?? b["resetsAt"] ?? nested?["resetsAt"]
                     rows.append(.init(id: "\(gi)-\(bi)", label: name.replacingOccurrences(of: " Models", with: "").replacingOccurrences(of: " models", with: "").replacingOccurrences(of: "Claude and GPT", with: "Claude / GPT") + " · " + bucket, remaining: percent(raw, fraction: true), reset: date(resetValue)))
                 }
