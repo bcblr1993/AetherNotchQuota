@@ -81,10 +81,38 @@ enum QuotaParser {
     }
     static func claude(_ data: [String: Any]) -> Snapshot {
         let fields = [("five_hour", "5 小时"), ("seven_day", "每周"), ("seven_day_sonnet", "Sonnet · 每周"), ("seven_day_opus", "Opus · 每周")]
-        return Snapshot(windows: fields.compactMap { key, label in
-            guard let w = data[key] as? [String: Any] else { return nil }
-            return QuotaWindow(id: key, label: label, remaining: percent(w["utilization"], used: true), reset: date(w["resets_at"]))
-        })
+        var rows: [QuotaWindow] = fields.compactMap { key, label in
+            guard let w = data[key] as? [String: Any], let remaining = percent(w["utilization"], used: true) else { return nil }
+            return QuotaWindow(id: key, label: label, remaining: remaining, reset: date(w["resets_at"]))
+        }
+        var present = Set(rows.map(\.id))
+        var scopedLabels = Set(rows.map { $0.label.lowercased() })
+        for (index, limit) in ((data["limits"] as? [[String: Any]]) ?? []).enumerated() {
+            guard limit["is_active"] as? Bool != false,
+                  let used = percent(limit["percent"]),
+                  let kind = limit["kind"] as? String else { continue }
+            let scopeValue = limit["scope"]
+            let scope = scopeValue as? [String: Any]
+            let scopeIsAbsent = scopeValue == nil || scopeValue is NSNull
+            let reset = date(limit["resets_at"])
+            if scopeIsAbsent, kind == "session", present.insert("five_hour").inserted {
+                rows.append(.init(id: "five_hour", label: "5 小时", remaining: 100 - used, reset: reset))
+                continue
+            }
+            if scopeIsAbsent, kind == "weekly_all", present.insert("seven_day").inserted {
+                rows.append(.init(id: "seven_day", label: "每周", remaining: 100 - used, reset: reset))
+                continue
+            }
+            guard let scope else { continue }
+            let model = scope["model"] as? [String: Any]
+            let surface = scope["surface"] as? [String: Any]
+            let name = (model?["display_name"] as? String) ?? (model?["id"] as? String) ?? (surface?["display_name"] as? String)
+            guard let name = name?.trimmingCharacters(in: .whitespacesAndNewlines), !name.isEmpty else { continue }
+            let label = name + (kind.contains("weekly") ? " · 每周" : kind == "session" ? " · 5 小时" : "")
+            guard scopedLabels.insert(label.lowercased()).inserted else { continue }
+            rows.append(.init(id: "limit-\(index)-\(kind)", label: label, remaining: 100 - used, reset: reset))
+        }
+        return Snapshot(windows: rows)
     }
     static func antigravity(_ data: [String: Any]) -> Snapshot {
         var rows: [QuotaWindow] = []
