@@ -30,6 +30,23 @@ final class QuotaTests: XCTestCase {
         let stale = DisplayState(snapshot: Snapshot(windows: codex.windows, fetchedAt: Date().addingTimeInterval(-601)))
         XCTAssert(stale.stale, "旧读数有过期标记")
     }
+
+    func testLatestClaudeLimitsFallbackAndScopedWindows() {
+        // Sanitized mirror of the current Claude desktop usage contract.
+        let payload = json(#"{"five_hour":null,"seven_day":null,"seven_day_opus":null,"limits":[{"kind":"session","group":"session","percent":20,"resets_at":"2030-01-01T05:00:00Z","scope":null},{"kind":"weekly_all","group":"weekly","percent":35,"resets_at":"2030-01-08T00:00:00Z","scope":null},{"kind":"weekly_scoped","group":"weekly","percent":0,"resets_at":"2030-01-08T00:00:00Z","scope":{"model":{"display_name":"Fable"}}},{"kind":"weekly_scoped","percent":42,"scope":{"surface":{"display_name":"Claude Code"}},"is_active":false},{}]}"#)
+        let snapshot = QuotaParser.claude(payload)
+        XCTAssertEqual(snapshot.windows.map(\.label), ["5 小时", "每周", "Fable · 每周"])
+        XCTAssertEqual(snapshot.windows.map(\.remaining), [80, 65, 100])
+        XCTAssertEqual(snapshot.windows[0].reset, QuotaParser.date("2030-01-01T05:00:00Z"))
+    }
+
+    func testClaudeFlatWindowsWinAndUnknownDoesNotBecomeZero() {
+        let payload = json(#"{"five_hour":{"utilization":5,"resets_at":null},"seven_day":{"utilization":null,"resets_at":"2030-01-08T00:00:00Z"},"limits":[{"kind":"session","percent":99,"resets_at":"2030-01-01T05:00:00Z","scope":null},{"kind":"weekly_all","percent":null,"scope":null},{"kind":"weekly_scoped","percent":"0","scope":{"model":{"display_name":"Future"}}}]}"#)
+        let snapshot = QuotaParser.claude(payload)
+        XCTAssertEqual(snapshot.windows.map(\.label), ["5 小时"])
+        XCTAssertEqual(snapshot.windows.first?.remaining, 95)
+        XCTAssertNil(snapshot.windows.first?.reset)
+    }
 }
 
 final class EndpointTests: XCTestCase {
