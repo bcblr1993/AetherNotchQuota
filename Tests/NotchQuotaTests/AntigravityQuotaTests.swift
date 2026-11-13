@@ -101,6 +101,28 @@ final class AntigravityQuotaTests: XCTestCase {
         XCTAssertTrue(QuotaParser.antigravityMissingGeminiModels(GeminiQuotaFixture.json(GeminiQuotaFixture.latestModels), summary: summary).isEmpty)
     }
 
+    func testCurrentGoogleUsagePanelKeepsAllFivePoolsIncludingExhaustedArgon() {
+        // Sanitized mirror of the current Google usage panel; account details and real timestamps are excluded.
+        let data = GeminiQuotaFixture.json(#"""
+        {"groups":[
+          {"displayName":"Gemini Models","buckets":[
+            {"displayName":"Weekly Limit Remaining","remainingFraction":0.93,"resetTime":"2030-01-04T09:00:00Z"},
+            {"displayName":"Five Hour Limit Remaining","remainingFraction":1}]},
+          {"displayName":"Claude and GPT models","buckets":[
+            {"displayName":"Weekly Limit Remaining","remainingFraction":0.47,"resetTime":"2030-01-07T17:00:00Z"},
+            {"displayName":"Five Hour Limit Remaining","remainingFraction":1}]},
+          {"displayName":"Gemini 4 Argon","buckets":[
+            {"displayName":"Gemini 4 Argon Weekly Limit","remainingFraction":0,"resetTime":"2030-01-04T09:00:00Z"}]}]}
+        """#)
+        let snapshot = QuotaParser.antigravity(data)
+        XCTAssertEqual(snapshot.windows.map(\.label), ["Gemini · 每周", "Gemini · 5 小时", "Claude / GPT · 每周", "Claude / GPT · 5 小时", "Gemini 4 Argon · 每周"])
+        XCTAssertEqual(snapshot.windows.map(\.remaining), [93, 100, 47, 100, 0])
+        XCTAssertEqual(snapshot.windows[0].reset, QuotaParser.date("2030-01-04T09:00:00Z"))
+        XCTAssertEqual(snapshot.windows[2].reset, QuotaParser.date("2030-01-07T17:00:00Z"))
+        XCTAssertEqual(snapshot.windows[4].reset, QuotaParser.date("2030-01-04T09:00:00Z"))
+        XCTAssertEqual(snapshot.remaining, 0, "An exhausted Argon pool must remain a real zero, not unknown or omitted")
+    }
+
     func testNestedRemainingAndResetTimeParsing() {
         let json: [String: Any] = [
             "groups": [
