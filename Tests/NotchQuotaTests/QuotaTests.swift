@@ -50,6 +50,18 @@ final class QuotaTests: XCTestCase {
 }
 
 final class EndpointTests: XCTestCase {
+    func testHubConstantEndpointAndStrictOriginValidation() throws {
+        // Sanitized source shape from the installed hub's argument-builder module.
+        let fixture = "exports.LS_CLOUD_CODE_ENDPOINT = 'https://daily-cloudcode-pa.googleapis.com';\n['--cloud_code_endpoint', exports.LS_CLOUD_CODE_ENDPOINT,];"
+        XCTAssertEqual(try Installation.endpoint(from: Data(fixture.utf8)), "https://daily-cloudcode-pa.googleapis.com/v1internal:")
+        for origin in ["https://daily-cloudcode-pa.googleapis.com.evil.example", "https://evil.example", "https://daily-cloudcode-pa.googleapis.com/path"] {
+            XCTAssertThrowsError(try Installation.endpoint(from: Data(fixture.replacingOccurrences(of: "https://daily-cloudcode-pa.googleapis.com", with: origin).utf8)))
+            XCTAssertThrowsError(try Installation.endpoint(from: Data("--cloud_code_endpoint \(origin)".utf8)))
+        }
+        XCTAssertThrowsError(try Installation.endpoint(from: Data("['--cloud_code_endpoint', exports.LS_CLOUD_CODE_ENDPOINT,];".utf8)))
+        XCTAssertThrowsError(try Installation.endpoint(from: Data(("exports.LS_CLOUD_CODE_ENDPOINT = 'https://cloudcode-pa.googleapis.com';" + fixture).utf8)))
+        XCTAssertEqual(try Installation.endpoint(from: Data("--cloud_code_endpoint https://daily-cloudcode-pa.sandbox.googleapis.com".utf8)), "https://daily-cloudcode-pa.sandbox.googleapis.com/v1internal:")
+    }
     func testUsesInstalledEndpointRatherThanOtherQuotaPool() throws {
         let sample = Data("['--cloud_code_endpoint', 'https://daily-cloudcode-pa.googleapis.com']".utf8)
         XCTAssertEqual(try Installation.endpoint(from: sample), "https://daily-cloudcode-pa.googleapis.com/v1internal:")

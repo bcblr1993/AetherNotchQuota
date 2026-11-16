@@ -57,9 +57,23 @@ enum Installation {
         let marker = Data("--cloud_code_endpoint".utf8)
         guard let position = archive.range(of: marker) else { throw QuotaError.message("当前 Antigravity 版本未提供可识别的额度地址") }
         let snippet = String(decoding: archive[position.upperBound..<min(archive.count, position.upperBound + 256)], as: UTF8.self)
-        let regex = try NSRegularExpression(pattern: "https://([a-z0-9-]+\\.googleapis\\.com)")
-        guard let match = regex.firstMatch(in: snippet, range: NSRange(snippet.startIndex..., in: snippet)), let range = Range(match.range, in: snippet) else { throw QuotaError.message("无法识别 Antigravity 额度服务") }
-        let endpoint = String(snippet[range])
+        let value: String
+        if snippet.range(of: #"\A["']\s*,\s*exports\.LS_CLOUD_CODE_ENDPOINT\s*,"#, options: .regularExpression) != nil {
+            // New hub builds pass a named constant from the same argument-builder module.
+            let context = String(decoding: archive[max(0, position.lowerBound - 4096)..<position.lowerBound], as: UTF8.self)
+            let regex = try NSRegularExpression(pattern: #"exports\.LS_CLOUD_CODE_ENDPOINT\s*=\s*['"](https://[^'"\s]+)['"]\s*;"#)
+            let values = Set(regex.matches(in: context, range: NSRange(context.startIndex..., in: context)).compactMap {
+                Range($0.range(at: 1), in: context).map { String(context[$0]) }
+            })
+            guard values.count == 1, let constant = values.first else { throw QuotaError.message("无法识别 Antigravity 额度服务") }
+            value = constant
+        } else {
+            let regex = try NSRegularExpression(pattern: #"\A(?:["']\s*,\s*["']|\s+)(https://[^'"\s,]+)"#)
+            guard let match = regex.firstMatch(in: snippet, range: NSRange(snippet.startIndex..., in: snippet)),
+                  let range = Range(match.range(at: 1), in: snippet) else { throw QuotaError.message("无法识别 Antigravity 额度服务") }
+            value = String(snippet[range])
+        }
+        let endpoint = value
         // Do not transmit Google credentials to arbitrary application-provided origins.
         guard ["https://cloudcode-pa.googleapis.com", "https://daily-cloudcode-pa.googleapis.com", "https://daily-cloudcode-pa.sandbox.googleapis.com"].contains(endpoint) else { throw QuotaError.message("Antigravity 额度地址尚未支持") }
         return endpoint + "/v1internal:"
