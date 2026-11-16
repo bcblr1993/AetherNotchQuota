@@ -50,6 +50,38 @@ private enum GeminiQuotaFixture {
 }
 
 final class AntigravityQuotaTests: XCTestCase {
+    func testCarbonHydrogenAndSelectableGoogleOrchestrators() {
+        // Synthetic API fixture using screenshot model labels, not a captured server response.
+        let data = GeminiQuotaFixture.json(#"""
+        {"tieredModelIds":{"carbon":["gemini-4-carbon-medium"],"hydrogen":["gemini-4-hydrogen-medium"],"flashLite":["google-auxiliary"]},
+         "agentModelSorts":[{"groups":[{"modelIds":["orchestrator-carbon","orchestrator-argon","claude-opus","google-internal"]}]}],
+         "models":{
+           "gemini-4-carbon-medium":{"displayName":"Gemini 4 Carbon Medium","quotaInfo":{"remainingFraction":0.98}},
+           "gemini-4-hydrogen-medium":{"displayName":"Gemini 4 Hydrogen Medium"},
+           "orchestrator-carbon":{"displayName":"Orchestrator (Carbon)","modelProvider":"MODEL_PROVIDER_GOOGLE","quotaInfo":{"remainingFraction":0.98}},
+           "orchestrator-argon":{"displayName":"Orchestrator (Argon)","modelProvider":"MODEL_PROVIDER_GOOGLE","quotaInfo":{"remainingFraction":0}},
+           "claude-opus":{"displayName":"Claude Opus 5.5","quotaInfo":{"remainingFraction":0}},
+           "google-internal":{"modelProvider":"MODEL_PROVIDER_GOOGLE","isInternal":true},
+           "google-auxiliary":{"modelProvider":"MODEL_PROVIDER_GOOGLE"},
+           "google-retired":{"modelProvider":"MODEL_PROVIDER_GOOGLE"}}}
+        """#)
+        let rows = QuotaParser.antigravityGeminiModels(data)
+        XCTAssertEqual(rows.map(\.label), ["Gemini 4 Carbon", "Gemini 4 Hydrogen", "Orchestrator (Argon)", "Orchestrator (Carbon)"])
+        XCTAssertEqual(rows.map(\.remaining), [98, nil, 0, 98])
+        let summary = QuotaParser.antigravity(GeminiQuotaFixture.json(#"""
+        {"groups":[{"displayName":"Gemini Models","buckets":[
+          {"displayName":"Weekly limit","remainingFraction":1},
+          {"displayName":"5h limit","remainingFraction":0.98}]},
+          {"displayName":"Claude and GPT models","buckets":[
+          {"displayName":"Weekly limit","remainingFraction":0},
+          {"displayName":"5h limit","remainingFraction":1}]}]}
+        """#))
+        XCTAssertEqual(summary.windows.map(\.remaining), [100, 98, 0, 100])
+        XCTAssertTrue(QuotaParser.antigravityMissingGeminiModels(data, summary: summary).isEmpty,
+                      "Orchestrator names must not invent additional pools beside the shared Google summary")
+        XCTAssertEqual(summary.remaining, 0)
+    }
+
     // Synthetic payload using the labels in the updated Google usage panel.
     func testShortUsageLabelsKeepBothPoolsAndResetTimes() {
         let data = GeminiQuotaFixture.json(#"""

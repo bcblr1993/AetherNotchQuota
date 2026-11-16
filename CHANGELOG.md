@@ -1,9 +1,10 @@
 # Changelog
 
-## 0.1.37 · 2026-11-12
+## 0.1.37 · 待发布
 
 - 兼容 Claude 最新 `limits[]` 额度结构：传统窗口缺失时读取 5 小时、全局每周及按模型或入口拆分的周额度。
 - 旧 Claude 顶层窗口仍优先；无效、未知和停用条目不会冒充真实零额度。
+- 补充 Gemini Carbon、Hydrogen 模型层级和 Google 提供商标记的 Orchestrator 模型识别，共享额度优先且不因 Orchestrator 名称额外推断独立额度池。
 - 使用当前本机客户端与只读真实请求复核 Codex 周额度，以及 Gemini、Claude / GPT 双周期和独立 Argon 额度。
 
 ## 0.1.36 · 2026-11-07

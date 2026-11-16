@@ -155,7 +155,8 @@ enum QuotaParser {
         return antigravityGeminiModels(data).filter { row in
             let name = geminiFamilyName(row.label).lowercased()
             if groups.contains(name) { return false }
-            return !(groups.contains("gemini") && !name.contains("argon"))
+            let independentArgon = name.hasPrefix("gemini ") && name.contains("argon")
+            return !(groups.contains("gemini") && !independentArgon)
         }
     }
 
@@ -173,7 +174,7 @@ enum QuotaParser {
         if let tiers = response["tieredModelIds"] as? [String: [String]] {
             // flashLite is an auxiliary routing tier, not evidence of a selectable main model.
             // A Lite model explicitly listed by the selector or default below remains eligible.
-            for tier in ["flash", "pro", "argon"] { ids.formUnion(tiers[tier] ?? []) }
+            for tier in ["flash", "pro", "argon", "carbon", "hydrogen"] { ids.formUnion(tiers[tier] ?? []) }
         }
         if let sorts = response["agentModelSorts"] as? [[String: Any]] {
             for sort in sorts {
@@ -188,8 +189,11 @@ enum QuotaParser {
             ids.formUnion(models.keys)
         }
         var rows: [QuotaWindow] = []
-        for id in ids.sorted() where id.lowercased().hasPrefix("gemini-") {
+        for id in ids.sorted() {
             guard let model = models[id], model["isInternal"] as? Bool != true else { continue }
+            // Orchestrator and future Google models need not use a gemini- ID.
+            // Require provider metadata for those IDs instead of guessing from their names.
+            guard id.lowercased().hasPrefix("gemini-") || model["modelProvider"] as? String == "MODEL_PROVIDER_GOOGLE" else { continue }
             let quota = model["quotaInfo"] as? [String: Any] ?? [:]
             let displayName = (model["displayName"] as? String)?.trimmingCharacters(in: .whitespacesAndNewlines)
             // Tiered models currently omit displayName. Derive a readable name without pinning a version.
