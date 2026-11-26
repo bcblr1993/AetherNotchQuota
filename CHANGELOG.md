@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.1.38 · 2026-11-26
+
+- 扩展 Codex 额度窗口与续期兼容：支持 `code_review_rate_limit`（代码审查）窗口、小于 1 小时的分钟级周期展示，以及附加限制 `metered_feature` 名称回退；登录续期路径补充识别 `/Applications/ChatGPT.app` 与 `~/Applications/ChatGPT.app` 内置 Codex CLI。
+- 扩展 Claude 周额度解析：新增 `seven_day_cowork`（Cowork · 每周）与 `seven_day_oauth_apps`（OAuth 应用 · 每周），保留未知值与真实零额度的严格区分。
+- 扩展 Google Antigravity 模型与分组兼容：补充 `neon` 模型层级与 `xhigh`/`extra-low`/`extra-high` 档位同额度同重置合并；跳过 `disabled` 分组，并在 `groups` 缺失或为空时回退读取顶层 `buckets`。
+- 灵动岛展开详情行上限从 6 行提升至 8 行，以容纳更多模型与周期窗口；同步完善简体中文、英文与日文三语本地化词条。
+
 ## 0.1.37 · 2026-11-16
 
 - 兼容 Claude 最新 `limits[]` 额度结构：传统窗口缺失时读取 5 小时、全局每周及按模型或入口拆分的周额度。

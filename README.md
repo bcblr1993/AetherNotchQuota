@@ -11,9 +11,9 @@ AetherNotchQuota 是 Apple Silicon Mac 上的原生 AI 订阅额度助手。把 
 
 [官网](https://aethernative.com/apps/notchquota/) · [下载正式版](https://github.com/bcblr1993/AetherNotchQuota/releases/latest) · [使用帮助](https://aethernative.com/apps/notchquota/support/) · [更新记录](CHANGELOG.md) · [反馈问题](https://github.com/bcblr1993/AetherNotchQuota/issues/new/choose)
 
-## 0.1.37 · 最新 Claude、Codex 与 Gemini 额度
+## 0.1.38 · 最新 Codex、Claude 与 Gemini 额度
 
-本版兼容 Claude 最新 `limits[]` 额度结构，可显示 5 小时、全局每周及按模型或入口拆分的周额度；同时复核 Codex 最新周额度，以及 Gemini、Claude / GPT 双周期与独立 Argon 额度显示。
+本版扩展了 Codex 代码审查与分钟级短周期、ChatGPT 内置 Codex CLI 续期路径、Claude Cowork / OAuth 应用周额度，以及 Antigravity `neon` 层级、`disabled` 分组过滤与顶层 `buckets` 回退；同时将灵动岛展开详情上限提升至 8 行并同步更新三语词条。
 
 旧格式继续兼容，未知、停用和真实零额度保持严格区分。详细记录见 [CHANGELOG](CHANGELOG.md)。
 

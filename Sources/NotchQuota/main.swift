@@ -168,7 +168,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
         let compact = cameraWidth > 0 ? cameraWidth + 94 : 100
         let expanded = quotaView.expanded
         let width = expanded ? max(276, compact) : compact
-        let rows = min(6, states[target]?.snapshot?.windows.count ?? 0)
+        let rows = min(QuotaView.maxVisibleRows, states[target]?.snapshot?.windows.count ?? 0)
         let detailHeight: CGFloat = rows == 0 ? 105 : CGFloat(12 + 39 + rows * 32 + 29)
         let height = topHeight + (expanded ? detailHeight : 0)
         let target = NSRect(x: screen.frame.midX - width / 2, y: screen.frame.maxY - height, width: width, height: height)

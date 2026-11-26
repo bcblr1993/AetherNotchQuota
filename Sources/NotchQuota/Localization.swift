@@ -93,9 +93,12 @@ enum L10n {
     }
     /// Translate only recognized window labels, leaving provider/model names intact.
     static func quotaLabel(_ source: String, language: AppLanguage? = nil) -> String {
-        source.components(separatedBy: " · ").map { component in
-            if component.hasSuffix(" 小时"), let hours = Int(component.dropLast(3)) {
-                return hours == 1 ? text("1 小时", language: language) : format("{0} 小时", String(hours), language: language)
+        let units = [(" 小时", "1 小时", "{0} 小时"), (" 分钟", "1 分钟", "{0} 分钟")]
+        return source.components(separatedBy: " · ").map { component in
+            for (suffix, singular, plural) in units where component.hasSuffix(suffix) {
+                if let value = Int(component.dropLast(suffix.count)), value >= 0 {
+                    return value == 1 ? text(singular, language: language) : format(plural, String(value), language: language)
+                }
             }
             return message(component, language: language)
         }.joined(separator: " · ")

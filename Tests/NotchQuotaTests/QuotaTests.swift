@@ -47,6 +47,58 @@ final class QuotaTests: XCTestCase {
         XCTAssertEqual(snapshot.windows.first?.remaining, 95)
         XCTAssertNil(snapshot.windows.first?.reset)
     }
+
+    func testCodexCodeReviewSubHourWindowsAndFeatureFallback() {
+        let payload = json(#"""
+        {"rate_limit":{"primary_window":{"used_percent":74,"limit_window_seconds":18000,"reset_at":1893456000},"secondary_window":{"used_percent":100,"limit_window_seconds":604800,"reset_at":1894060800}},"code_review_rate_limit":{"primary_window":{"used_percent":null,"limit_window_seconds":604800}},"additional_rate_limits":[{"limit_name":"GPT-Reserve","rate_limit":{"primary_window":{"used_percent":0,"limit_window_seconds":900}}},{"limit_name":"   ","metered_feature":"codex_bench","rate_limit":{"primary_window":{"used_percent":25,"limit_window_seconds":60}}},{"rate_limit":{"primary_window":{"used_percent":50,"limit_window_seconds":300}}}]}
+        """#)
+        let snapshot = QuotaParser.codex(payload)
+        XCTAssertEqual(snapshot.windows.map(\.label), [
+            "5 小时",
+            "每周",
+            "代码审查 · 每周",
+            "GPT-Reserve · 15 分钟",
+            "codex_bench · 1 分钟",
+            "附加 · 5 分钟"
+        ])
+        XCTAssertEqual(snapshot.windows[0].remaining, 26)
+        XCTAssertEqual(snapshot.windows[1].remaining, 0)
+        XCTAssertNil(snapshot.windows[2].remaining, "null used_percent in code_review_rate_limit must stay nil/unknown, never 0%")
+        XCTAssertEqual(snapshot.windows[3].remaining, 100)
+        XCTAssertEqual(snapshot.windows[4].remaining, 75)
+        XCTAssertEqual(snapshot.windows[5].remaining, 50)
+        XCTAssertEqual(snapshot.remaining, 0, "Real exhausted window keeps snapshot remaining at 0")
+
+        let reviewZero = QuotaParser.codex(json(#"{"code_review_rate_limit":{"primary_window":{"used_percent":0,"limit_window_seconds":604800}}}"#))
+        XCTAssertEqual(reviewZero.windows.map(\.label), ["代码审查 · 每周"])
+        XCTAssertEqual(reviewZero.windows.first?.remaining, 100)
+    }
+
+    func testClaudeCoworkAndOAuthAppsPreserveUnknownVsRealZero() {
+        let payload = json(#"""
+        {"five_hour":{"utilization":0,"resets_at":"2030-01-01T05:00:00Z"},"seven_day":{"utilization":null,"resets_at":null},"seven_day_sonnet":{"utilization":100,"resets_at":"2030-01-08T00:00:00Z"},"seven_day_cowork":{"utilization":25,"resets_at":"2030-01-08T00:00:00Z"},"seven_day_oauth_apps":{"utilization":0,"resets_at":"2030-01-08T00:00:00Z"},"limits":[]}
+        """#)
+        let snapshot = QuotaParser.claude(payload)
+        XCTAssertEqual(snapshot.windows.map(\.label), ["5 小时", "Sonnet · 每周", "Cowork · 每周", "OAuth 应用 · 每周"])
+        XCTAssertEqual(snapshot.windows.map(\.remaining), [100, 0, 75, 100])
+        XCTAssertEqual(snapshot.remaining, 0)
+
+        let nullOptional = QuotaParser.claude(json(#"{"seven_day_cowork":{"utilization":null,"resets_at":"2030-01-08T00:00:00Z"},"seven_day_oauth_apps":null}"#))
+        XCTAssertTrue(nullOptional.windows.isEmpty, "Null utilization/object must be omitted rather than coerced to 0%")
+    }
+
+    func testCodexSessionFallbackIncludesBundledChatGPTPaths() {
+        let home = URL(fileURLWithPath: "/Users/example")
+        let paths = CodexSession.executablePaths(home: home, codexApp: nil)
+        XCTAssertEqual(paths, [
+            "/opt/homebrew/bin/codex",
+            "/Users/example/.local/bin/codex",
+            "/Applications/ChatGPT.app/Contents/Resources/codex-cli/CodexCLI.app/Contents/MacOS/codex",
+            "/Applications/ChatGPT.app/Contents/Resources/bin/codex",
+            "/Users/example/Applications/ChatGPT.app/Contents/Resources/codex-cli/CodexCLI.app/Contents/MacOS/codex",
+            "/Users/example/Applications/ChatGPT.app/Contents/Resources/bin/codex"
+        ])
+    }
 }
 
 final class EndpointTests: XCTestCase {
