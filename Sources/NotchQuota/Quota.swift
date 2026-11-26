@@ -63,24 +63,43 @@ enum QuotaParser {
     }
     static func codex(_ data: [String: Any]) -> Snapshot {
         var rows: [QuotaWindow] = []
+        func windowLabel(seconds: Double, key: String) -> String {
+            if seconds == 604800 { return "每周" }
+            if seconds == 18000 { return "5 小时" }
+            if seconds >= 3600 { return "\(Int(seconds / 3600)) 小时" }
+            if seconds > 0 { return "\(max(1, Int(seconds / 60))) 分钟" }
+            return key == "primary_window" ? "当前窗口" : "长期窗口"
+        }
         func append(_ limits: [String: Any], prefix: String) {
             for key in ["primary_window", "secondary_window"] {
                 guard let w = limits[key] as? [String: Any] else { continue }
                 let seconds = number(w["limit_window_seconds"]) ?? 0
-                let label = seconds == 604800 ? "每周" : seconds == 18000 ? "5 小时" : seconds > 0 ? "\(Int(seconds / 3600)) 小时" : (key == "primary_window" ? "当前窗口" : "长期窗口")
+                let label = windowLabel(seconds: seconds, key: key)
                 rows.append(.init(id: prefix + key, label: prefix + label, remaining: percent(w["used_percent"], used: true), reset: date(w["reset_at"])))
             }
         }
         if let limits = data["rate_limit"] as? [String: Any] { append(limits, prefix: "") }
+        if let reviewLimits = data["code_review_rate_limit"] as? [String: Any] { append(reviewLimits, prefix: "代码审查 · ") }
         if let extras = data["additional_rate_limits"] as? [[String: Any]] {
             for item in extras {
-                if let limits = item["rate_limit"] as? [String: Any] { append(limits, prefix: (item["limit_name"] as? String ?? "附加") + " · ") }
+                guard let limits = item["rate_limit"] as? [String: Any] else { continue }
+                let name = [item["limit_name"], item["metered_feature"]]
+                    .compactMap { ($0 as? String)?.trimmingCharacters(in: .whitespacesAndNewlines) }
+                    .first { !$0.isEmpty } ?? "附加"
+                append(limits, prefix: name + " · ")
             }
         }
         return Snapshot(windows: rows)
     }
     static func claude(_ data: [String: Any]) -> Snapshot {
-        let fields = [("five_hour", "5 小时"), ("seven_day", "每周"), ("seven_day_sonnet", "Sonnet · 每周"), ("seven_day_opus", "Opus · 每周")]
+        let fields = [
+            ("five_hour", "5 小时"),
+            ("seven_day", "每周"),
+            ("seven_day_sonnet", "Sonnet · 每周"),
+            ("seven_day_opus", "Opus · 每周"),
+            ("seven_day_cowork", "Cowork · 每周"),
+            ("seven_day_oauth_apps", "OAuth 应用 · 每周")
+        ]
         var rows: [QuotaWindow] = fields.compactMap { key, label in
             guard let w = data[key] as? [String: Any], let remaining = percent(w["utilization"], used: true) else { return nil }
             return QuotaWindow(id: key, label: label, remaining: remaining, reset: date(w["resets_at"]))
@@ -117,20 +136,30 @@ enum QuotaParser {
     static func antigravity(_ data: [String: Any]) -> Snapshot {
         var rows: [QuotaWindow] = []
         let response = data["response"] as? [String: Any] ?? data
-        if let groups = response["groups"] as? [[String: Any]] {
+        func appendBuckets(_ buckets: [[String: Any]], groupIndex: Int, groupName: String) {
+            let prefix = groupName
+                .replacingOccurrences(of: " Models", with: "")
+                .replacingOccurrences(of: " models", with: "")
+                .replacingOccurrences(of: "Claude and GPT", with: "Claude / GPT")
+            for (bi, b) in buckets.enumerated() {
+                guard b["disabled"] as? Bool != true else { continue }
+                let nested = b["remaining"] as? [String: Any]
+                let raw = b["remainingFraction"] ?? nested?["remainingFraction"]
+                let rawBucket = b["displayName"] as? String ?? b["window"] as? String ?? "额度"
+                let period = (b["window"] as? String ?? rawBucket).lowercased()
+                let fiveHour = period.range(of: #"\b(?:5\s*h(?:ours?)?|five[ -]+hours?)\b"#, options: .regularExpression) != nil
+                let bucket = period.contains("weekly") ? "每周" : fiveHour ? "5 小时" : rawBucket
+                let resetValue = b["resetTime"] ?? nested?["resetTime"] ?? b["resetsAt"] ?? nested?["resetsAt"]
+                rows.append(.init(id: "\(groupIndex)-\(bi)", label: prefix + " · " + bucket, remaining: percent(raw, fraction: true), reset: date(resetValue)))
+            }
+        }
+        if let groups = response["groups"] as? [[String: Any]], !groups.isEmpty {
             for (gi, group) in groups.enumerated() {
                 let name = group["displayName"] as? String ?? "模型组"
-                for (bi, b) in ((group["buckets"] as? [[String: Any]]) ?? []).enumerated() {
-                    let nested = b["remaining"] as? [String: Any]
-                    let raw = b["remainingFraction"] ?? nested?["remainingFraction"]
-                    let rawBucket = b["displayName"] as? String ?? b["window"] as? String ?? "额度"
-                    let period = (b["window"] as? String ?? rawBucket).lowercased()
-                    let fiveHour = period.range(of: #"\b(?:5\s*h(?:ours?)?|five[ -]+hours?)\b"#, options: .regularExpression) != nil
-                    let bucket = period.contains("weekly") ? "每周" : fiveHour ? "5 小时" : rawBucket
-                    let resetValue = b["resetTime"] ?? nested?["resetTime"] ?? b["resetsAt"] ?? nested?["resetsAt"]
-                    rows.append(.init(id: "\(gi)-\(bi)", label: name.replacingOccurrences(of: " Models", with: "").replacingOccurrences(of: " models", with: "").replacingOccurrences(of: "Claude and GPT", with: "Claude / GPT") + " · " + bucket, remaining: percent(raw, fraction: true), reset: date(resetValue)))
-                }
+                appendBuckets((group["buckets"] as? [[String: Any]]) ?? [], groupIndex: gi, groupName: name)
             }
+        } else if let buckets = response["buckets"] as? [[String: Any]] {
+            appendBuckets(buckets, groupIndex: 0, groupName: "模型组")
         }
         if !rows.isEmpty { return Snapshot(windows: rows) }
         let status = data["userStatus"] as? [String: Any] ?? [:]
@@ -161,7 +190,7 @@ enum QuotaParser {
     }
 
     private static func geminiFamilyName(_ name: String) -> String {
-        name.replacingOccurrences(of: #"(?i)\s+(?:\((?:low|medium|high|max)\)|low|medium|high|max)$"#,
+        name.replacingOccurrences(of: #"(?i)\s+(?:\((?:x?high|extra[- ]?(?:low|high)|low|medium|max)\)|(?:x?high|extra[- ]?(?:low|high)|low|medium|max))$"#,
                                   with: "", options: .regularExpression)
     }
 
@@ -174,7 +203,7 @@ enum QuotaParser {
         if let tiers = response["tieredModelIds"] as? [String: [String]] {
             // flashLite is an auxiliary routing tier, not evidence of a selectable main model.
             // A Lite model explicitly listed by the selector or default below remains eligible.
-            for tier in ["flash", "pro", "argon", "carbon", "hydrogen"] { ids.formUnion(tiers[tier] ?? []) }
+            for tier in ["flash", "pro", "argon", "carbon", "hydrogen", "neon"] { ids.formUnion(tiers[tier] ?? []) }
         }
         if let sorts = response["agentModelSorts"] as? [[String: Any]] {
             for sort in sorts {
@@ -214,7 +243,7 @@ enum QuotaParser {
             guard seen.insert(name).inserted else { return nil }
             var result = row
             result.label = name
-            result.id = row.id.replacingOccurrences(of: #"-(?:low|medium|high|max)$"#, with: "", options: .regularExpression)
+            result.id = row.id.replacingOccurrences(of: #"(?i)(?:-tiered)?-(?:x?high|extra[-_ ]?(?:low|high)|low|medium|max)$"#, with: "", options: .regularExpression)
             return result
         }
     }

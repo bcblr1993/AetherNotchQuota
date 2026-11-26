@@ -4,8 +4,27 @@ import CFNetwork
 // Runs the credential owner's refresh protocol only after an expired access token.
 // No thread is created, no model request is made, and no account output is logged.
 enum CodexSession {
+    static func executablePaths(
+        home: URL = FileManager.default.homeDirectoryForCurrentUser,
+        codexApp: URL? = Installation.app("Codex")
+    ) -> [String] {
+        var paths: [String] = []
+        if let codexApp { paths.append(codexApp.appendingPathComponent("Contents/Resources/codex").path) }
+        paths.append("/opt/homebrew/bin/codex")
+        paths.append(home.appendingPathComponent(".local/bin/codex").path)
+        let chatGPTApps = [
+            URL(fileURLWithPath: "/Applications/ChatGPT.app"),
+            home.appendingPathComponent("Applications/ChatGPT.app")
+        ]
+        for app in chatGPTApps {
+            paths.append(app.appendingPathComponent("Contents/Resources/codex-cli/CodexCLI.app/Contents/MacOS/codex").path)
+            paths.append(app.appendingPathComponent("Contents/Resources/bin/codex").path)
+        }
+        return paths
+    }
+
     static func refresh(force: Bool = true) throws {
-        let paths = [Installation.app("Codex")?.appendingPathComponent("Contents/Resources/codex").path ?? "", "/opt/homebrew/bin/codex", FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent(".local/bin/codex").path]
+        let paths = executablePaths()
         guard let binary = paths.first(where: { FileManager.default.isExecutableFile(atPath: $0) }) else { throw QuotaError.message("Codex 登录已过期，请重新登录") }
         let process = Process(), input = Pipe(), output = Pipe()
         process.executableURL = URL(fileURLWithPath: binary)

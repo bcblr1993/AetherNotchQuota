@@ -56,6 +56,7 @@ final class QuotaButton: NSButton {
     override func rightMouseDown(with event: NSEvent) { superview?.rightMouseDown(with: event) }
 }
 final class QuotaView: NSView {
+    static let maxVisibleRows = 8
     var provider: Provider = .codex
     var nextProviderTitle: String?
     var accountTitle: String?
@@ -166,7 +167,7 @@ final class QuotaView: NSView {
             (message as NSString).draw(in: NSRect(x: 17, y: y, width: bounds.width - 34, height: 47), withAttributes: attrs)
             return
         }
-        for row in rows.prefix(6) {
+        for row in rows.prefix(Self.maxVisibleRows) {
             text(L10n.quotaLabel(row.label), x: 17, y: y, size: 10.5, color: NSColor(white: 0.84, alpha: 1), width: bounds.width - 77)
             let value = row.remaining.map { "\(Int($0.rounded()))%" } ?? "—"
             text(value, x: bounds.width - 61, y: y, size: 10.5, color: muted, width: 44, align: .right)

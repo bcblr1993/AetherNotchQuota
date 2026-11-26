@@ -250,6 +250,90 @@ final class AntigravityQuotaTests: XCTestCase {
         XCTAssertEqual(QuotaParser.antigravityGeminiModels(future).map(\.label), ["Gemini Future"])
         XCTAssertTrue(QuotaParser.hasGeminiQuota(QuotaParser.antigravity(["groups": [["displayName": "Gemini Models", "buckets": [["remainingFraction": 0.5]]]]])))
     }
+
+    func testNeonTierXHighExtraLowCollapseAndUnknownVsRealZero() {
+        let reset = "2030-01-08T00:00:00Z"
+        let basePayload = GeminiQuotaFixture.json(#"""
+        {
+          "tieredModelIds": {
+            "neon": ["gemini-4-neon-low", "gemini-4-neon-medium", "gemini-4-neon-high", "gemini-4-neon-xhigh"],
+            "hydrogen": ["gemini-4-hydrogen-tiered-high", "gemini-4-hydrogen-tiered-xhigh"],
+            "flash": ["gemini-3.8-flash-tiered", "gemini-3.5-flash-extra-low"]
+          },
+          "agentModelSorts": [
+            {"groups": [{"modelIds": ["orchestrator-neon"]}]}
+          ],
+          "models": {
+            "gemini-4-neon-low": {"displayName": "Gemini 4 Neon (Low)", "quotaInfo": {"remainingFraction": 1, "resetTime": "2030-01-08T00:00:00Z"}},
+            "gemini-4-neon-medium": {"displayName": "Gemini 4 Neon (Medium)", "quotaInfo": {"remainingFraction": 1, "resetTime": "2030-01-08T00:00:00Z"}},
+            "gemini-4-neon-high": {"displayName": "Gemini 4 Neon (High)", "quotaInfo": {"remainingFraction": 1, "resetTime": "2030-01-08T00:00:00Z"}},
+            "gemini-4-neon-xhigh": {"displayName": "Gemini 4 Neon (XHigh)", "quotaInfo": {"remainingFraction": 1, "resetTime": "2030-01-08T00:00:00Z"}},
+            "gemini-4-hydrogen-tiered-high": {"quotaInfo": {"remainingFraction": 0.5, "resetTime": "2030-01-08T00:00:00Z"}},
+            "gemini-4-hydrogen-tiered-xhigh": {"quotaInfo": {"remainingFraction": 0.5, "resetTime": "2030-01-08T00:00:00Z"}},
+            "gemini-3.8-flash-tiered": {"quotaInfo": {"remainingFraction": 0.9}},
+            "gemini-3.5-flash-extra-low": {"quotaInfo": {"remainingFraction": 0.8, "resetTime": "2030-01-08T00:00:00Z"}},
+            "orchestrator-neon": {"displayName": "Orchestrator (Neon)", "modelProvider": "MODEL_PROVIDER_GOOGLE", "quotaInfo": {"remainingFraction": 1, "resetTime": "2030-01-08T00:00:00Z"}}
+          }
+        }
+        """#)
+        let collapsed = QuotaParser.antigravityGeminiModels(basePayload)
+        XCTAssertEqual(collapsed.map(\.label), ["Gemini 3.5 Flash", "Gemini 3.8 Flash", "Gemini 4 Hydrogen", "Gemini 4 Neon", "Orchestrator (Neon)"])
+        XCTAssertEqual(collapsed.map(\.id), [
+            "gemini-model-gemini-3.5-flash",
+            "gemini-model-gemini-3.8-flash-tiered",
+            "gemini-model-gemini-4-hydrogen",
+            "gemini-model-gemini-4-neon",
+            "gemini-model-orchestrator-neon"
+        ])
+        XCTAssertEqual(collapsed.first { $0.label == "Gemini 4 Neon" }?.remaining, 100)
+        XCTAssertEqual(collapsed.first { $0.label == "Gemini 4 Hydrogen" }?.reset, QuotaParser.date(reset))
+
+        var diverged = basePayload
+        var models = diverged["models"] as! [String: [String: Any]]
+        models["gemini-4-neon-xhigh"]?["quotaInfo"] = ["remainingFraction": 0, "resetTime": reset]
+        models["gemini-4-hydrogen-tiered-xhigh"]?["quotaInfo"] = ["remainingFraction": NSNull(), "resetTime": reset]
+        diverged["models"] = models
+        let split = QuotaParser.antigravityGeminiModels(diverged)
+        XCTAssertEqual(split.first { $0.label == "Gemini 4 Neon (XHigh)" }?.remaining, 0)
+        XCTAssertEqual(split.first { $0.label == "Gemini 4 Neon (High)" }?.remaining, 100)
+        XCTAssertEqual(split.first { $0.label == "Gemini 4 Hydrogen High" }?.remaining, 50)
+        XCTAssertNil(split.first { $0.label == "Gemini 4 Hydrogen Xhigh" }?.remaining, "Unknown xhigh quota must remain nil rather than collapsing or becoming 0%")
+    }
+
+    func testSummarySkipsDisabledBucketsAndFallsBackToTopLevelBuckets() {
+        let grouped = GeminiQuotaFixture.json(#"""
+        {
+          "groups": [
+            {"displayName": "Gemini Models", "buckets": [
+              {"displayName": "Weekly Limit Remaining", "window": "weekly", "remainingFraction": 0},
+              {"displayName": "Disabled Bucket", "window": "5h", "disabled": true, "remainingFraction": 0.9}
+            ]},
+            {"displayName": "Claude and GPT models", "buckets": [
+              {"displayName": "Five Hour Limit Remaining", "window": "5h", "remainingFraction": null}
+            ]}
+          ]
+        }
+        """#)
+        let summary = QuotaParser.antigravity(grouped)
+        XCTAssertEqual(summary.windows.map(\.label), ["Gemini · 每周", "Claude / GPT · 5 小时"])
+        XCTAssertEqual(summary.windows[0].remaining, 0, "Real 0 remainingFraction must remain 0")
+        XCTAssertNil(summary.windows[1].remaining, "Null remainingFraction must remain nil/unknown")
+
+        let topLevel = GeminiQuotaFixture.json(#"""
+        {
+          "response": {
+            "buckets": [
+              {"displayName": "Weekly Limit Remaining", "window": "weekly", "remainingFraction": 0.65, "resetTime": "2030-01-08T00:00:00Z"},
+              {"displayName": "Retired Limit", "window": "5h", "disabled": true, "remainingFraction": 0}
+            ]
+          }
+        }
+        """#)
+        let fallback = QuotaParser.antigravity(topLevel)
+        XCTAssertEqual(fallback.windows.map(\.label), ["模型组 · 每周"])
+        XCTAssertEqual(fallback.windows.map(\.remaining), [65])
+        XCTAssertEqual(fallback.windows.first?.reset, QuotaParser.date("2030-01-08T00:00:00Z"))
+    }
 }
 
 private final class GeminiQuotaProtocol: URLProtocol {

@@ -60,4 +60,23 @@ final class LocalizationTests: XCTestCase {
         XCTAssertEqual(L10n.message("Codex 额度服务暂不可用（401）", language: .english), "Codex quota service unavailable (401)")
         XCTAssertEqual(L10n.message("Unknown provider error", language: .japanese), "Unknown provider error")
     }
+    func testSubHourAndNewProviderWindowLabelsAcrossSupportedLanguages() {
+        let cases: [(String, [AppLanguage: String])] = [
+            ("1 分钟", [.simplifiedChinese: "1 分钟", .english: "1 minute", .japanese: "1分"]),
+            ("GPT-Reserve · 15 分钟", [.simplifiedChinese: "GPT-Reserve · 15 分钟", .english: "GPT-Reserve · 15 minutes", .japanese: "GPT-Reserve · 15分"]),
+            ("代码审查 · 每周", [.simplifiedChinese: "代码审查 · 每周", .english: "Code Review · Weekly", .japanese: "コードレビュー · 週間"]),
+            ("代码审查 · 5 小时", [.simplifiedChinese: "代码审查 · 5 小时", .english: "Code Review · 5 hours", .japanese: "コードレビュー · 5時間"]),
+            ("代码审查 · 1 分钟", [.simplifiedChinese: "代码审查 · 1 分钟", .english: "Code Review · 1 minute", .japanese: "コードレビュー · 1分"]),
+            ("Cowork · 每周", [.simplifiedChinese: "Cowork · 每周", .english: "Cowork · Weekly", .japanese: "Cowork · 週間"]),
+            ("OAuth 应用 · 每周", [.simplifiedChinese: "OAuth 应用 · 每周", .english: "OAuth Apps · Weekly", .japanese: "OAuth アプリ · 週間"]),
+            ("Gemini 4 Neon", [.simplifiedChinese: "Gemini 4 Neon", .english: "Gemini 4 Neon", .japanese: "Gemini 4 Neon"]),
+            ("Gemini 4 Hydrogen · 每周", [.simplifiedChinese: "Gemini 4 Hydrogen · 每周", .english: "Gemini 4 Hydrogen · Weekly", .japanese: "Gemini 4 Hydrogen · 週間"]),
+            ("Gemini 4 Carbon · 5 小时", [.simplifiedChinese: "Gemini 4 Carbon · 5 小时", .english: "Gemini 4 Carbon · 5 hours", .japanese: "Gemini 4 Carbon · 5時間"])
+        ]
+        for (source, expected) in cases {
+            for language in AppLanguage.supported {
+                XCTAssertEqual(L10n.quotaLabel(source, language: language), expected[language], "\(source) -> \(language.rawValue)")
+            }
+        }
+    }
 }

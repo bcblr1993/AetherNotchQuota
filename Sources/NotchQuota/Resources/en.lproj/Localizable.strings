@@ -5,6 +5,7 @@
 " · 移入展开" = " · Hover to expand";
 " · 账号已变化，重新勾选确认" = " · Account changed; select again to confirm";
 "1 小时" = "1 hour";
+"1 分钟" = "1 minute";
 "100% 恢复啦" = "Back to 100%!";
 "15 分钟" = "15 minutes";
 "3 小时" = "3 hours";
@@ -34,15 +35,18 @@
 "Codex 登录续期失败" = "Could not renew Codex sign-in";
 "Codex 登录续期失败，请重新登录" = "Could not renew Codex sign-in; sign in again";
 "Codex 额度服务暂不可用（{0}）" = "Codex quota service unavailable ({0})";
+"Cowork" = "Cowork";
 "Gemini · 5 小时" = "Gemini · 5 hours";
 "Gemini · 每周" = "Gemini · Weekly";
 "Google 账号" = "Google Account";
+"OAuth 应用" = "OAuth Apps";
 "Opus · 每周" = "Opus · Weekly";
 "Sonnet · 每周" = "Sonnet · Weekly";
 "{0} {1} 剩余 {2}，{3}" = "{0} {1}, {2} remaining, {3}";
 "{0} {1}已恢复至 100%" = "{0} {1} restored to 100%";
 "{0} · {1} · 点击查看账号详情" = "{0} · {1} · Click for account details";
 "{0} 个账号" = "Accounts: {0}";
+"{0} 分钟" = "{0} minutes";
 "{0} 分钟后重置" = "Resets in {0} min";
 "{0} 剩余额度 {1}，{2}" = "{0}, {1} quota remaining, {2}";
 "{0} 天内重置" = "Resets within {0} d";
@@ -62,6 +66,7 @@
 "下移（⌥↓）" = "Move Down (⌥↓)";
 "临时隐藏" = "Hide Temporarily";
 "云朵团子" = "Cloud Puff";
+"代码审查" = "Code Review";
 "仅在本机显示，不修改原应用账号。" = "Only changes the name on this Mac, not the original account.";
 "使用说明 / 反馈问题…" = "Help / Report an Issue…";
 "侧边栏模式" = "Sidebar Mode";
